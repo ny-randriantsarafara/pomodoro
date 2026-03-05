@@ -1,4 +1,5 @@
 import { getGithubConnections } from "@/actions/github-actions";
+import { getProjects } from "@/actions/project-actions";
 import { GitHubConnectionsList } from "@/components/settings/github-connections-list";
 import { AddConnectionButton } from "@/components/settings/add-connection-button";
 
@@ -8,7 +9,10 @@ interface SettingsPageProps {
 
 export default async function SettingsPage({ searchParams }: SettingsPageProps) {
   const params = await searchParams;
-  const connections = await getGithubConnections();
+  const [connections, projects] = await Promise.all([
+    getGithubConnections(),
+    getProjects(),
+  ]);
   const clientId = process.env.GITHUB_CONNECTIONS_CLIENT_ID ?? "";
 
   return (
@@ -32,7 +36,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
         <h2 className="text-xl font-medium text-[var(--text-primary)]">
           GitHub Connections
         </h2>
-        <GitHubConnectionsList connections={connections} />
+        <GitHubConnectionsList connections={connections} projects={projects} />
         <AddConnectionButton clientId={clientId} />
       </section>
     </div>

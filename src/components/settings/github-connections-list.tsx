@@ -1,15 +1,18 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { GitBranch } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
+import { RepoImportDialog } from "@/components/project/repo-import-dialog";
 import { removeGithubConnection } from "@/actions/github-actions";
-import type { GithubConnection } from "@/lib/db/schema";
+import type { GithubConnection, Project } from "@/lib/db/schema";
 
 interface Props {
   readonly connections: ReadonlyArray<GithubConnection>;
+  readonly projects: ReadonlyArray<Project>;
 }
 
 function formatConnectedDate(date: Date): string {
@@ -20,12 +23,23 @@ function formatConnectedDate(date: Date): string {
   });
 }
 
-export function GitHubConnectionsList({ connections }: Props) {
+export function GitHubConnectionsList({ connections, projects }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [connectionToRemove, setConnectionToRemove] = useState<
     GithubConnection | null
   >(null);
+  const [browseConnectionId, setBrowseConnectionId] = useState<string | null>(null);
+
+  const existingRepoUrls = useMemo(() => {
+    const urls = new Set<string>();
+    for (const project of projects) {
+      if (project.githubRepoUrl) {
+        urls.add(project.githubRepoUrl);
+      }
+    }
+    return urls;
+  }, [projects]);
 
   function handleConfirmDisconnect() {
     if (!connectionToRemove) return;
@@ -61,14 +75,24 @@ export function GitHubConnectionsList({ connections }: Props) {
                   Connected {formatConnectedDate(connection.createdAt)}
                 </p>
               </div>
-              <Button
-                variant="danger"
-                size="sm"
-                disabled={isPending}
-                onClick={() => setConnectionToRemove(connection)}
-              >
-                Disconnect
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setBrowseConnectionId(connection.id)}
+                >
+                  <GitBranch className="mr-1.5 h-3.5 w-3.5" />
+                  Browse Repos
+                </Button>
+                <Button
+                  variant="danger"
+                  size="sm"
+                  disabled={isPending}
+                  onClick={() => setConnectionToRemove(connection)}
+                >
+                  Disconnect
+                </Button>
+              </div>
             </Card>
           </li>
         ))}
@@ -105,6 +129,15 @@ export function GitHubConnectionsList({ connections }: Props) {
           </div>
         </div>
       </Dialog>
+
+      <RepoImportDialog
+        open={browseConnectionId !== null}
+        onClose={() => setBrowseConnectionId(null)}
+        connections={connections}
+        existingRepoUrls={existingRepoUrls}
+        preselectedConnectionId={browseConnectionId ?? undefined}
+        onImported={() => setBrowseConnectionId(null)}
+      />
     </>
   );
 }
