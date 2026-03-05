@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  BarChart3,
   CalendarDays,
   Clock,
   FolderKanban,
@@ -13,6 +14,7 @@ import { UserMenu } from "./user-menu";
 const navItems = [
   { href: "/timer", label: "Timer", icon: Clock },
   { href: "/log", label: "Log", icon: CalendarDays },
+  { href: "/stats", label: "Stats", icon: BarChart3 },
   { href: "/projects", label: "Projects", icon: FolderKanban },
   { href: "/settings", label: "Settings", icon: Settings },
 ] as const;
