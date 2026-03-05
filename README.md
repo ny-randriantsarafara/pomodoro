@@ -1,36 +1,75 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Pomodoro — Focus. Build. Ship.
+
+A multi-user Pomodoro timer app with tiered focus modes (Short 25m, Average 50m, Deep 90m), project-based session tracking, GitHub integration, and a daily log for standup reference.
+
+## Features
+
+- **Three focus modes:** Short Focus (25m), Average Focus (50m), Deep Focus (90m) with proportional breaks
+- **Project-based session tracking** — every focus session tied to a project with a required task description
+- **Daily Log** — view completed sessions grouped by date for standup reference
+- **GitHub Integration** — connect multiple GitHub accounts (personal, work, etc.) via OAuth, import repos as projects
+- **Multi-user auth** via GitHub OAuth
+- **Dark minimal premium UI**
+
+## Tech Stack
+
+- Next.js 15 (App Router)
+- TypeScript
+- PostgreSQL + Drizzle ORM
+- Auth.js v5 (GitHub OAuth)
+- Tailwind CSS v4
+- Vitest + Playwright
+
+## Prerequisites
+
+- Node.js 20+
+- Docker (for PostgreSQL)
 
 ## Getting Started
 
-First, run the development server:
-
 ```bash
+# Clone the repo
+git clone <repo-url>
+cd pomodoro
+
+# Start PostgreSQL
+docker compose up -d
+
+# Install dependencies
+npm install
+
+# Set up environment
+cp .env.example .env.local
+# Edit .env.local with your values:
+# - Generate AUTH_SECRET: npx auth secret
+# - Create a GitHub OAuth App for auth (callback: http://localhost:3000/api/auth/callback/github)
+# - Create a separate GitHub OAuth App for connections (callback: http://localhost:3000/api/github/callback)
+
+# Run database migrations
+npm run db:migrate
+
+# Start dev server
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Available Scripts
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Script | Description |
+|--------|-------------|
+| `npm run dev` | Start dev server with Turbopack |
+| `npm run build` | Production build |
+| `npm run start` | Start production server |
+| `npm run test` | Run unit tests (watch mode) |
+| `npm run test:run` | Run unit tests once |
+| `npm run test:e2e` | Run E2E tests |
+| `npm run db:generate` | Generate Drizzle migrations |
+| `npm run db:migrate` | Apply database migrations |
+| `npm run db:studio` | Open Drizzle Studio |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## VPS Deployment
 
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Build: `npm run build`
+- Run: `npm start` (uses `next start` on port 3000)
+- Put behind nginx or caddy as a reverse proxy
+- Use a shared PostgreSQL instance with a dedicated `pomodoro` database
+- Set all env vars in production
