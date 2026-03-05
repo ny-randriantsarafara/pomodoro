@@ -67,25 +67,39 @@ export function RepoImportDialog({
         );
     }, [repos, search]);
 
-    const [prevOpen, setPrevOpen] = useState(false);
-    if (open && !prevOpen && preselectedConnectionId) {
-        setPrevOpen(true);
+    // Track previous preselectedConnectionId to detect when it changes
+    const [prevPreselected, setPrevPreselected] = useState(preselectedConnectionId);
+    if (preselectedConnectionId !== prevPreselected) {
+        setPrevPreselected(preselectedConnectionId);
+        setSelectedConnectionId(preselectedConnectionId ?? '');
         setRepos([]);
         setSearch('');
         setError(null);
-        setIsLoading(true);
-        startTransition(async () => {
-            const result = await fetchReposForConnection(preselectedConnectionId);
-            setIsLoading(false);
-            if (result.success) {
-                setRepos(result.data);
-            } else {
-                setError(result.error);
-            }
-        });
+        setIsLoading(false);
     }
-    if (!open && prevOpen) {
-        setPrevOpen(false);
+
+    // Track open transitions to auto-fetch when dialog opens with preselected connection
+    const [wasOpen, setWasOpen] = useState(false);
+    if (open && !wasOpen) {
+        setWasOpen(true);
+        if (preselectedConnectionId) {
+            setRepos([]);
+            setSearch('');
+            setError(null);
+            setIsLoading(true);
+            startTransition(async () => {
+                const result = await fetchReposForConnection(preselectedConnectionId);
+                setIsLoading(false);
+                if (result.success) {
+                    setRepos(result.data);
+                } else {
+                    setError(result.error);
+                }
+            });
+        }
+    }
+    if (!open && wasOpen) {
+        setWasOpen(false);
     }
 
     function loadRepos(connectionId: string) {
