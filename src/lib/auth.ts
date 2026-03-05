@@ -25,7 +25,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         sessionsTable: authSessions,
         verificationTokensTable: verificationTokens,
     }),
-    providers: [GitHub, Google],
+    providers: [
+        GitHub({ allowDangerousEmailAccountLinking: true }),
+        Google({ allowDangerousEmailAccountLinking: true }),
+    ],
     pages: {
         signIn: '/sign-in',
     },
