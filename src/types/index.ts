@@ -1,5 +1,15 @@
 import type { FocusMode, SessionStatus } from "@/lib/db/schema";
 
+export interface StartTimerParams {
+  readonly sessionId: string;
+  readonly projectId: string;
+  readonly projectName: string;
+  readonly projectColor: string;
+  readonly task: string;
+  readonly focusMode: FocusMode;
+  readonly durationSeconds: number;
+}
+
 export interface TimerConfig {
   readonly workMinutes: number;
   readonly breakMinutes: number;
