@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 
 export interface TimerRingProps {
   readonly progress: number;
+  readonly isCompleted?: boolean;
   readonly size?: number;
   readonly strokeWidth?: number;
   readonly children?: ReactNode;
@@ -13,6 +14,7 @@ export interface TimerRingProps {
 
 export function TimerRing({
   progress,
+  isCompleted = false,
   size = 320,
   strokeWidth = 4,
   children,
@@ -27,6 +29,17 @@ export function TimerRing({
       className={cn("relative flex items-center justify-center", className)}
       style={{ width: size, height: size }}
     >
+      {isCompleted && (
+        <div
+          className="pointer-events-none absolute inset-0 flex items-center justify-center"
+          aria-hidden
+        >
+          <div
+            className="h-full w-full rounded-full bg-[var(--accent)] animate-[timerPulse_0.6s_ease-out_forwards]"
+            style={{ maxWidth: size, maxHeight: size }}
+          />
+        </div>
+      )}
       <svg
         width={size}
         height={size}

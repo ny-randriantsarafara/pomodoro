@@ -13,6 +13,7 @@ export interface UseTimerReturn {
   readonly remainingSeconds: number;
   readonly phase: TimerPhase;
   readonly progress: number;
+  readonly justCompletedFocus: boolean;
   readonly startTimer: (params: StartTimerParams) => void;
   readonly pauseTimer: () => void;
   readonly resumeTimer: () => void;
@@ -37,11 +38,14 @@ function createActiveTimer(params: StartTimerParams): ActiveTimer {
   };
 }
 
+const COMPLETION_PULSE_MS = 800;
+
 export function useTimer(): UseTimerReturn {
   const [activeTimer, setActiveTimer] = useState<ActiveTimer | null>(null);
   const [remainingSeconds, setRemainingSeconds] = useState(0);
   const [phase, setPhase] = useState<TimerPhase>("idle");
   const [breakDurationSeconds, setBreakDurationSeconds] = useState(0);
+  const [justCompletedFocus, setJustCompletedFocus] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const clearIntervalSafe = useCallback(() => {
@@ -55,6 +59,7 @@ export function useTimer(): UseTimerReturn {
     (timer: ActiveTimer) => {
       clearIntervalSafe();
       clearTimer();
+      setJustCompletedFocus(true);
       completeSession(timer.sessionId).then(() => {
         const breakSecs = FOCUS_MODES[timer.focusMode].breakMinutes * 60;
         setActiveTimer(null);
@@ -65,6 +70,15 @@ export function useTimer(): UseTimerReturn {
     },
     [clearIntervalSafe]
   );
+
+  useEffect(() => {
+    if (!justCompletedFocus) return;
+    const id = setTimeout(
+      () => setJustCompletedFocus(false),
+      COMPLETION_PULSE_MS
+    );
+    return () => clearTimeout(id);
+  }, [justCompletedFocus]);
 
   useEffect(() => {
     const stored = loadTimer();
@@ -106,6 +120,17 @@ export function useTimer(): UseTimerReturn {
 
     return clearIntervalSafe;
   }, [clearIntervalSafe, completeFocusAndStartBreak]);
+
+  useEffect(() => {
+    if (phase !== "focus") return;
+
+    function handleBeforeUnload(e: BeforeUnloadEvent) {
+      e.preventDefault();
+    }
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [phase]);
 
   useEffect(() => {
     if (phase !== "break" || remainingSeconds > 0) return;
@@ -207,6 +232,7 @@ export function useTimer(): UseTimerReturn {
     remainingSeconds,
     phase,
     progress,
+    justCompletedFocus,
     startTimer,
     pauseTimer,
     resumeTimer,

@@ -23,6 +23,7 @@ export function TimerView({ projects }: TimerViewProps) {
     remainingSeconds,
     phase,
     progress,
+    justCompletedFocus,
     startTimer,
     pauseTimer,
     resumeTimer,
@@ -49,6 +50,7 @@ export function TimerView({ projects }: TimerViewProps) {
         {phase !== "idle" && (
           <TimerRing
             progress={progress}
+            isCompleted={justCompletedFocus}
             size={320}
             strokeWidth={4}
             className="relative z-10 opacity-100 transition-opacity duration-300"

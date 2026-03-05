@@ -13,7 +13,7 @@ export default async function AppLayout({ children }: Props) {
   return (
     <div className="flex h-screen">
       <Sidebar />
-      <main className="flex-1 overflow-y-auto">
+      <main className="flex-1 overflow-y-auto animate-[fadeIn_0.2s_ease-out]">
         <ActiveSessionBanner />
         {children}
       </main>

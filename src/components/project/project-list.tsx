@@ -34,8 +34,14 @@ export function ProjectList({ projects }: ProjectListProps) {
           New Project
         </span>
       </button>
-      {projects.map((project) => (
-        <ProjectCard key={project.id} project={project} />
+      {projects.map((project, index) => (
+        <div
+          key={project.id}
+          className="animate-[fadeIn_0.3s_ease-out_both]"
+          style={{ animationDelay: `${index * 80}ms` }}
+        >
+          <ProjectCard project={project} />
+        </div>
       ))}
       <Dialog
         open={createOpen}
