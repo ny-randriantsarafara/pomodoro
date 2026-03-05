@@ -7,9 +7,9 @@ A multi-user Pomodoro timer with tiered focus modes, project-based session track
 ## Features
 
 - **Three focus modes** with proportional breaks:
-  - Short Focus: 25 min work / 5 min break
-  - Average Focus: 50 min work / 10 min break
-  - Deep Focus: 90 min work / 20 min break
+    - Short Focus: 25 min work / 5 min break
+    - Average Focus: 50 min work / 10 min break
+    - Deep Focus: 90 min work / 20 min break
 - **Project-based tracking** -- every session is tied to a project with a required task description
 - **Daily Log** -- sessions grouped by date with summary stats, for standup reference
 - **GitHub Integration** -- connect multiple GitHub accounts via OAuth, import repos as projects
@@ -19,14 +19,14 @@ A multi-user Pomodoro timer with tiered focus modes, project-based session track
 
 ## Tech Stack
 
-| Layer | Technology |
-|-------|-----------|
-| Framework | Next.js 16 (App Router, Turbopack) |
-| Language | TypeScript (strict) |
-| Database | PostgreSQL 17 + Drizzle ORM |
-| Auth | Auth.js v5 (NextAuth) with GitHub OAuth |
-| Styling | Tailwind CSS v4 |
-| Testing | Vitest (unit) + Playwright (E2E) |
+| Layer     | Technology                              |
+| --------- | --------------------------------------- |
+| Framework | Next.js 16 (App Router, Turbopack)      |
+| Language  | TypeScript (strict)                     |
+| Database  | PostgreSQL 17 + Drizzle ORM             |
+| Auth      | Auth.js v5 (NextAuth) with GitHub OAuth |
+| Styling   | Tailwind CSS v4                         |
+| Testing   | Vitest (unit) + Playwright (E2E)        |
 
 ## Prerequisites
 
@@ -47,9 +47,9 @@ This is used by Auth.js for signing users in.
 1. Go to [github.com/settings/developers](https://github.com/settings/developers)
 2. Click **New OAuth App**
 3. Fill in:
-   - **Application name:** `Pomodoro Auth` (or whatever you want)
-   - **Homepage URL:** `http://localhost:3000`
-   - **Authorization callback URL:** `http://localhost:3000/api/auth/callback/github`
+    - **Application name:** `Pomodoro Auth` (or whatever you want)
+    - **Homepage URL:** `http://localhost:3000`
+    - **Authorization callback URL:** `http://localhost:3000/api/auth/callback/github`
 4. Click **Register application**
 5. On the app page, copy the **Client ID**
 6. Click **Generate a new client secret**, then copy the **Client Secret**
@@ -68,9 +68,9 @@ This is a separate app used for linking GitHub accounts to import repositories a
 1. Go to [github.com/settings/developers](https://github.com/settings/developers)
 2. Click **New OAuth App**
 3. Fill in:
-   - **Application name:** `Pomodoro Connections` (or whatever you want)
-   - **Homepage URL:** `http://localhost:3000`
-   - **Authorization callback URL:** `http://localhost:3000/api/github/callback`
+    - **Application name:** `Pomodoro Connections` (or whatever you want)
+    - **Homepage URL:** `http://localhost:3000`
+    - **Authorization callback URL:** `http://localhost:3000/api/github/callback`
 4. Click **Register application**
 5. Copy the **Client ID**
 6. Generate and copy the **Client Secret**
@@ -96,14 +96,14 @@ cp .env.example .env.local
 
 Then fill in each variable:
 
-| Variable | How to get it |
-|----------|--------------|
-| `DATABASE_URL` | Use `postgresql://postgres:postgres@localhost:5432/pomodoro` for local dev (matches docker-compose.yml). For production, use your VPS PostgreSQL connection string. |
-| `AUTH_SECRET` | Run `npx auth secret` in the project root. It generates a random secret and writes it to `.env.local`. If it doesn't write automatically, copy the output value. |
-| `AUTH_GITHUB_ID` | Client ID from OAuth App 1 (User Authentication). |
-| `AUTH_GITHUB_SECRET` | Client Secret from OAuth App 1. |
-| `GITHUB_CONNECTIONS_CLIENT_ID` | Client ID from OAuth App 2 (GitHub Connections). |
-| `GITHUB_CONNECTIONS_CLIENT_SECRET` | Client Secret from OAuth App 2. |
+| Variable                           | How to get it                                                                                                                                                       |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`                     | Use `postgresql://postgres:postgres@localhost:5432/pomodoro` for local dev (matches docker-compose.yml). For production, use your VPS PostgreSQL connection string. |
+| `AUTH_SECRET`                      | Run `npx auth secret` in the project root. It generates a random secret and writes it to `.env.local`. If it doesn't write automatically, copy the output value.    |
+| `AUTH_GITHUB_ID`                   | Client ID from OAuth App 1 (User Authentication).                                                                                                                   |
+| `AUTH_GITHUB_SECRET`               | Client Secret from OAuth App 1.                                                                                                                                     |
+| `GITHUB_CONNECTIONS_CLIENT_ID`     | Client ID from OAuth App 2 (GitHub Connections).                                                                                                                    |
+| `GITHUB_CONNECTIONS_CLIENT_SECRET` | Client Secret from OAuth App 2.                                                                                                                                     |
 
 Your `.env.local` should look like:
 
@@ -156,17 +156,17 @@ The app runs at [http://localhost:3000](http://localhost:3000). You'll be redire
 
 ## Available Scripts
 
-| Script | Description |
-|--------|-------------|
-| `npm run dev` | Start dev server with Turbopack |
-| `npm run build` | Production build |
-| `npm start` | Start production server (port 3000) |
-| `npm test` | Run unit tests in watch mode |
-| `npm run test:run` | Run unit tests once |
-| `npm run test:e2e` | Run Playwright E2E tests |
+| Script                | Description                                          |
+| --------------------- | ---------------------------------------------------- |
+| `npm run dev`         | Start dev server with Turbopack                      |
+| `npm run build`       | Production build                                     |
+| `npm start`           | Start production server (port 3000)                  |
+| `npm test`            | Run unit tests in watch mode                         |
+| `npm run test:run`    | Run unit tests once                                  |
+| `npm run test:e2e`    | Run Playwright E2E tests                             |
 | `npm run db:generate` | Generate Drizzle migration files from schema changes |
-| `npm run db:migrate` | Apply pending migrations to the database |
-| `npm run db:studio` | Open Drizzle Studio (database browser) |
+| `npm run db:migrate`  | Apply pending migrations to the database             |
+| `npm run db:studio`   | Open Drizzle Studio (database browser)               |
 
 ---
 

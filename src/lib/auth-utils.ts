@@ -1,12 +1,12 @@
-import { auth } from "@/lib/auth";
-import { redirect } from "next/navigation";
+import { auth } from '@/lib/auth';
+import { redirect } from 'next/navigation';
 
 export async function requireAuth() {
-  const session = await auth();
+    const session = await auth();
 
-  if (!session?.user?.id) {
-    redirect("/sign-in");
-  }
+    if (!session?.user?.id) {
+        redirect('/sign-in');
+    }
 
-  return session.user;
+    return session.user;
 }

@@ -1,14 +1,14 @@
 services:
-  postgres:
-    image: postgres:17-alpine
-    ports:
-      - "5432:5432"
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: pomodoro
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
+    postgres:
+        image: postgres:17-alpine
+        ports:
+            - '5432:5432'
+        environment:
+            POSTGRES_USER: postgres
+            POSTGRES_PASSWORD: postgres
+            POSTGRES_DB: pomodoro
+        volumes:
+            - postgres_data:/var/lib/postgresql/data
 
 volumes:
-  postgres_data:
+    postgres_data:

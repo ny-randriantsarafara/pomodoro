@@ -1,12 +1,12 @@
-import { redirect } from "next/navigation";
-import { auth } from "@/lib/auth";
+import { redirect } from 'next/navigation';
+import { auth } from '@/lib/auth';
 
 export default async function HomePage() {
-  const session = await auth();
+    const session = await auth();
 
-  if (session) {
-    redirect("/timer");
-  }
+    if (session) {
+        redirect('/timer');
+    }
 
-  redirect("/sign-in");
+    redirect('/sign-in');
 }
