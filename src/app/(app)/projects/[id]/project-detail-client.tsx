@@ -11,7 +11,7 @@ import { ProjectForm } from '@/components/project/project-form';
 import { FOCUS_MODES } from '@/lib/constants';
 import type { Project } from '@/lib/db/schema';
 import type { SessionWithProjects } from '@/types';
-import type { FocusMode } from '@/lib/db/schema';
+
 import type { BadgeVariant } from '@/components/ui/badge';
 
 interface ProjectDetailClientProps {

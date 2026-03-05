@@ -86,7 +86,7 @@ export async function fetchReposForConnection(
         const repos = await fetchUserRepos(connection.accessToken);
         return { success: true, data: repos };
     } catch (err: unknown) {
-        const status = (err as any)?.status;
+        const status = err instanceof Error ? (err as Error & { status?: number }).status : undefined;
         if (status === 401 && connection.refreshToken) {
             try {
                 const refreshed = await refreshGitHubToken(connection.refreshToken);

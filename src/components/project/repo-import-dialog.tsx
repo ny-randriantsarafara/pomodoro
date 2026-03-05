@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition, useMemo, useEffect } from 'react';
+import { useState, useTransition, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Search, GitBranch, Check, Loader2 } from 'lucide-react';
 import { Dialog } from '@/components/ui/dialog';
@@ -67,8 +67,28 @@ export function RepoImportDialog({
         );
     }, [repos, search]);
 
-    function handleConnectionChange(connectionId: string) {
-        setSelectedConnectionId(connectionId);
+    const [prevOpen, setPrevOpen] = useState(false);
+    if (open && !prevOpen && preselectedConnectionId) {
+        setPrevOpen(true);
+        setRepos([]);
+        setSearch('');
+        setError(null);
+        setIsLoading(true);
+        startTransition(async () => {
+            const result = await fetchReposForConnection(preselectedConnectionId);
+            setIsLoading(false);
+            if (result.success) {
+                setRepos(result.data);
+            } else {
+                setError(result.error);
+            }
+        });
+    }
+    if (!open && prevOpen) {
+        setPrevOpen(false);
+    }
+
+    function loadRepos(connectionId: string) {
         setRepos([]);
         setSearch('');
         setError(null);
@@ -85,6 +105,11 @@ export function RepoImportDialog({
                 setError(result.error);
             }
         });
+    }
+
+    function handleConnectionChange(connectionId: string) {
+        setSelectedConnectionId(connectionId);
+        loadRepos(connectionId);
     }
 
     function handleImport(repo: GitHubRepo, index: number) {
@@ -117,13 +142,6 @@ export function RepoImportDialog({
         setError(null);
         onClose();
     }
-
-    useEffect(() => {
-        if (open && preselectedConnectionId) {
-            handleConnectionChange(preselectedConnectionId);
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [open, preselectedConnectionId]);
 
     const hasConnections = connections.length > 0;
 

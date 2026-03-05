@@ -119,8 +119,8 @@ export async function fetchUserRepos(
     );
 
     if (!response.ok) {
-        const err = new Error(`GitHub API error: ${response.status}`);
-        (err as any).status = response.status;
+        const err: Error & { status?: number } = new Error(`GitHub API error: ${response.status}`);
+        err.status = response.status;
         throw err;
     }
 
