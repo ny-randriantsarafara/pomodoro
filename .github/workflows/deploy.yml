@@ -93,6 +93,7 @@ jobs:
                   AUTH_GITHUB_ID: ${{ secrets.AUTH_GITHUB_ID }}
                   AUTH_GITHUB_SECRET: ${{ secrets.AUTH_GITHUB_SECRET }}
                   NEXTAUTH_URL: ${{ vars.NEXTAUTH_URL }}
+                  AUTH_TRUST_HOST: "true"
                   GITHUB_CONNECTIONS_CLIENT_ID: ${{ secrets.GH_CONNECTIONS_CLIENT_ID }}
                   GITHUB_CONNECTIONS_CLIENT_SECRET: ${{ secrets.GH_CONNECTIONS_CLIENT_SECRET }}
               run: |
@@ -103,6 +104,7 @@ jobs:
                   AUTH_GITHUB_ID=$AUTH_GITHUB_ID
                   AUTH_GITHUB_SECRET=$AUTH_GITHUB_SECRET
                   NEXTAUTH_URL=$NEXTAUTH_URL
+                  AUTH_TRUST_HOST=$AUTH_TRUST_HOST
                   GITHUB_CONNECTIONS_CLIENT_ID=$GITHUB_CONNECTIONS_CLIENT_ID
                   GITHUB_CONNECTIONS_CLIENT_SECRET=$GITHUB_CONNECTIONS_CLIENT_SECRET
                   EOF

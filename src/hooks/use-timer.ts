@@ -3,6 +3,8 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { loadTimer, saveTimer, clearTimer } from './use-timer-persistence';
 import { abandonSession, completeSession } from '@/actions/session-actions';
+import { playAlarm, stopAlarm } from '@/lib/alarm';
+import { requestNotificationPermission, sendTimerCompleteNotification } from '@/lib/notifications';
 import { FOCUS_MODES } from '@/lib/constants';
 import type { ActiveTimer, StartTimerParams } from '@/types';
 
@@ -122,6 +124,8 @@ export function useTimer(): UseTimerReturn {
             clearIntervalSafe();
             clearTimer();
             setJustCompletedFocus(true);
+            playAlarm();
+            sendTimerCompleteNotification(timer.task);
             completeSession(timer.sessionId).then(() => {
                 const breakSecs =
                     FOCUS_MODES[timer.focusMode].breakMinutes * 60;
@@ -144,10 +148,15 @@ export function useTimer(): UseTimerReturn {
     }, [justCompletedFocus]);
 
     useEffect(() => {
+        void requestNotificationPermission();
+    }, []);
+
+    useEffect(() => {
         const pendingSessionId = pendingCompletionSessionIdRef.current;
         if (!pendingSessionId) return;
 
         pendingCompletionSessionIdRef.current = null;
+        playAlarm();
         void completeSession(pendingSessionId);
     }, []);
 
@@ -189,6 +198,7 @@ export function useTimer(): UseTimerReturn {
             setRemainingSeconds((prev) => {
                 if (prev <= 1) {
                     clearIntervalSafe();
+                    stopAlarm();
                     setPhase('idle');
                     setBreakDurationSeconds(0);
                     return 0;
@@ -243,6 +253,7 @@ export function useTimer(): UseTimerReturn {
     const abandonTimer = useCallback(async () => {
         if (!activeTimer) return;
         clearIntervalSafe();
+        stopAlarm();
         const elapsedSec = Math.max(
             0,
             activeTimer.durationSeconds - remainingSeconds

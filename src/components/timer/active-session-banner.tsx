@@ -66,7 +66,16 @@ export function ActiveSessionBanner() {
             )}
             style={{ borderBottomWidth: 1, borderBottomColor: 'var(--accent)' }}
         >
-            <span>Focus session in progress:</span>
+            <span className="flex shrink-0 items-center gap-1">
+                {timer.projects.map((p) => (
+                    <span
+                        key={p.id}
+                        className="h-2 w-2 shrink-0 rounded-full"
+                        style={{ backgroundColor: p.color }}
+                        aria-hidden
+                    />
+                ))}
+            </span>
             <span className="truncate font-medium text-[var(--text-primary)]">
                 {task}
             </span>

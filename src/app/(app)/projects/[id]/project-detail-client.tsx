@@ -11,7 +11,8 @@ import { ProjectForm } from '@/components/project/project-form';
 import { FOCUS_MODES } from '@/lib/constants';
 import type { Project } from '@/lib/db/schema';
 import type { SessionWithProjects } from '@/types';
-import type { FocusMode, SessionStatus } from '@/lib/db/schema';
+import type { FocusMode } from '@/lib/db/schema';
+import type { BadgeVariant } from '@/components/ui/badge';
 
 interface ProjectDetailClientProps {
     readonly project: Project;
@@ -116,30 +117,42 @@ export function ProjectDetailClient({
                 </h2>
                 {sessions.length > 0 ? (
                     <ul className="space-y-3">
-                        {sessions.map((session) => (
-                            <li
-                                key={session.id}
-                                className="flex flex-wrap items-center gap-2 rounded-lg border border-[#1F1F23] bg-[#141416] px-4 py-3"
-                            >
-                                <span className="font-medium text-[var(--text-primary)]">
-                                    {session.task}
-                                </span>
-                                <Badge variant={session.focusMode as FocusMode}>
-                                    {FOCUS_MODES[session.focusMode].label}
-                                </Badge>
-                                <Badge
-                                    variant={session.status as SessionStatus}
+                        {sessions.map((session) => {
+                            const modeVariant: BadgeVariant = session.focusMode;
+                            const statusVariant: BadgeVariant = session.status;
+                            return (
+                                <li
+                                    key={session.id}
+                                    className="flex flex-wrap items-center gap-2 rounded-lg border border-[#1F1F23] bg-[#141416] px-4 py-3"
                                 >
-                                    {session.status}
-                                </Badge>
-                                <span className="text-sm text-[var(--text-secondary)]">
-                                    {formatDuration(session.durationSeconds)}
-                                </span>
-                                <span className="text-sm text-[var(--text-secondary)]">
-                                    {formatDateTime(session.startedAt)}
-                                </span>
-                            </li>
-                        ))}
+                                    <span className="flex items-center gap-1">
+                                        {session.projects.map((p) => (
+                                            <span
+                                                key={p.id}
+                                                className="h-2 w-2 shrink-0 rounded-full"
+                                                style={{ backgroundColor: p.color }}
+                                                aria-hidden
+                                            />
+                                        ))}
+                                    </span>
+                                    <span className="font-medium text-[var(--text-primary)]">
+                                        {session.task}
+                                    </span>
+                                    <Badge variant={modeVariant}>
+                                        {FOCUS_MODES[session.focusMode].label}
+                                    </Badge>
+                                    <Badge variant={statusVariant}>
+                                        {session.status}
+                                    </Badge>
+                                    <span className="text-sm text-[var(--text-secondary)]">
+                                        {formatDuration(session.durationSeconds)}
+                                    </span>
+                                    <span className="text-sm text-[var(--text-secondary)]">
+                                        {formatDateTime(session.startedAt)}
+                                    </span>
+                                </li>
+                            );
+                        })}
                     </ul>
                 ) : (
                     <p className="text-[var(--text-secondary)]">
