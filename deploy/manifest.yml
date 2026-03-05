@@ -1,0 +1,30 @@
+name: pomodoro
+image: ghcr.io/ny-randriantsarafara/pomodoro
+
+validate:
+  command: "npm ci && npm run lint && npm run test:run"
+
+health_check:
+  port: 3000
+  path: /
+  retries: 15
+  interval: 5
+
+bootstrap:
+  databases:
+    - pomodoro
+
+env:
+  secrets:
+    - DATABASE_URL
+    - AUTH_SECRET
+    - AUTH_GITHUB_ID
+    - AUTH_GITHUB_SECRET
+    - AUTH_GOOGLE_ID
+    - AUTH_GOOGLE_SECRET
+    - GH_CONNECTIONS_CLIENT_ID
+    - GH_CONNECTIONS_CLIENT_SECRET
+  vars:
+    - NEXTAUTH_URL
+  static:
+    AUTH_TRUST_HOST: "true"

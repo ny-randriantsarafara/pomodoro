@@ -10,6 +10,10 @@ env:
     IMAGE_NAME: ${{ github.repository }}
     DEPLOY_DIR: /home/deploy/apps/pomodoro
 
+permissions:
+  contents: read
+  packages: write
+
 jobs:
     validate:
         name: Lint & Test
