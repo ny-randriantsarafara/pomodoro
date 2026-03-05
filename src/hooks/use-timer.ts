@@ -25,9 +25,7 @@ const TICK_MS = 1000;
 function createActiveTimer(params: StartTimerParams): ActiveTimer {
     return {
         sessionId: params.sessionId,
-        projectId: params.projectId,
-        projectName: params.projectName,
-        projectColor: params.projectColor,
+        projects: params.projects,
         task: params.task,
         focusMode: params.focusMode,
         startedAt: Date.now(),

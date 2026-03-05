@@ -1,9 +1,9 @@
 'use server';
 
 import { db } from '@/lib/db';
-import { focusSessions, projects } from '@/lib/db/schema';
+import { focusSessions, projects, sessionProjects } from '@/lib/db/schema';
 import { requireAuth } from '@/lib/auth-utils';
-import { eq, desc } from 'drizzle-orm';
+import { eq, desc, inArray } from 'drizzle-orm';
 import type { StatsData, DailyFocusPoint, ProjectStats } from '@/types';
 import type { FocusMode } from '@/lib/db/schema';
 
@@ -44,9 +44,6 @@ export async function getStats(): Promise<StatsData> {
     const allSessions = await db
         .select({
             id: focusSessions.id,
-            projectId: focusSessions.projectId,
-            projectName: projects.name,
-            projectColor: projects.color,
             focusMode: focusSessions.focusMode,
             startedAt: focusSessions.startedAt,
             completedAt: focusSessions.completedAt,
@@ -54,11 +51,25 @@ export async function getStats(): Promise<StatsData> {
             status: focusSessions.status,
         })
         .from(focusSessions)
-        .innerJoin(projects, eq(focusSessions.projectId, projects.id))
         .where(eq(focusSessions.userId, user.id))
         .orderBy(desc(focusSessions.startedAt));
 
     const completed = allSessions.filter((s) => s.status === 'completed');
+    const completedIds = completed.map((s) => s.id);
+
+    const projectRows =
+        completedIds.length > 0
+            ? await db
+                  .select({
+                      sessionId: sessionProjects.sessionId,
+                      projectId: projects.id,
+                      projectName: projects.name,
+                      projectColor: projects.color,
+                  })
+                  .from(sessionProjects)
+                  .innerJoin(projects, eq(sessionProjects.projectId, projects.id))
+                  .where(inArray(sessionProjects.sessionId, completedIds))
+            : [];
     const abandoned = allSessions.filter((s) => s.status === 'abandoned');
 
     const totalFocusSeconds = completed.reduce(
@@ -190,7 +201,7 @@ export async function getStats(): Promise<StatsData> {
     const maxHourIdx = hourCounts.indexOf(Math.max(...hourCounts));
     const peakHour = hourCounts[maxHourIdx] > 0 ? maxHourIdx : null;
 
-    // Project stats
+    // Project stats (100% time credit per tagged project)
     const projectMap = new Map<
         string,
         {
@@ -201,20 +212,22 @@ export async function getStats(): Promise<StatsData> {
             lastDate: Date | null;
         }
     >();
-    for (const s of completed) {
-        const existing = projectMap.get(s.projectId) ?? {
-            name: s.projectName,
-            color: s.projectColor,
+    for (const row of projectRows) {
+        const session = completed.find((s) => s.id === row.sessionId);
+        if (!session) continue;
+        const existing = projectMap.get(row.projectId) ?? {
+            name: row.projectName,
+            color: row.projectColor,
             totalSeconds: 0,
             count: 0,
             lastDate: null,
         };
-        existing.totalSeconds += s.durationSeconds;
+        existing.totalSeconds += session.durationSeconds;
         existing.count += 1;
-        if (!existing.lastDate || s.startedAt > existing.lastDate) {
-            existing.lastDate = s.startedAt;
+        if (!existing.lastDate || session.startedAt > existing.lastDate) {
+            existing.lastDate = session.startedAt;
         }
-        projectMap.set(s.projectId, existing);
+        projectMap.set(row.projectId, existing);
     }
 
     const projectStats: ProjectStats[] = Array.from(projectMap.entries())

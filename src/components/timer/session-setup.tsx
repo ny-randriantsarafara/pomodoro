@@ -33,7 +33,7 @@ export function SessionSetup({ projects, onStart }: SessionSetupProps) {
         const trimmedTask = task.trim();
         setIsSubmitting(true);
 
-        const result = await startSession(projectId, trimmedTask, focusMode);
+        const result = await startSession([projectId], trimmedTask, focusMode);
 
         if (result.success) {
             const project = projects.find((p) => p.id === projectId);
@@ -45,9 +45,9 @@ export function SessionSetup({ projects, onStart }: SessionSetupProps) {
             const durationSeconds = FOCUS_MODES[focusMode].workMinutes * 60;
             onStart({
                 sessionId: result.data.id,
-                projectId: project.id,
-                projectName: project.name,
-                projectColor: project.color,
+                projects: [
+                    { id: project.id, name: project.name, color: project.color },
+                ],
                 task: trimmedTask,
                 focusMode,
                 durationSeconds,

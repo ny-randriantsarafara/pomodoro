@@ -118,9 +118,6 @@ export const focusSessions = pgTable('focus_sessions', {
     userId: uuid('user_id')
         .notNull()
         .references(() => users.id, { onDelete: 'cascade' }),
-    projectId: uuid('project_id')
-        .notNull()
-        .references(() => projects.id, { onDelete: 'cascade' }),
     focusMode: focusModeEnum('focus_mode').notNull(),
     task: text('task').notNull(),
     startedAt: timestamp('started_at', { mode: 'date' }).notNull(),
@@ -129,6 +126,27 @@ export const focusSessions = pgTable('focus_sessions', {
     status: sessionStatusEnum('status').notNull(),
     createdAt: timestamp('created_at', { mode: 'date' }).defaultNow().notNull(),
 });
+
+export const sessionProjects = pgTable(
+    'session_projects',
+    {
+        sessionId: uuid('session_id')
+            .notNull()
+            .references(() => focusSessions.id, { onDelete: 'cascade' }),
+        projectId: uuid('project_id')
+            .notNull()
+            .references(() => projects.id, { onDelete: 'cascade' }),
+    },
+    (table) => [
+        {
+            compositePk: primaryKey({
+                columns: [table.sessionId, table.projectId],
+            }),
+        },
+    ]
+);
+
+export type SessionProject = typeof sessionProjects.$inferSelect;
 
 export const githubConnections = pgTable('github_connections', {
     id: uuid('id').defaultRandom().primaryKey(),

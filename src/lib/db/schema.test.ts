@@ -3,6 +3,7 @@ import {
     users,
     projects,
     focusSessions,
+    sessionProjects,
     githubConnections,
     focusModeEnum,
     sessionStatusEnum,
@@ -42,11 +43,16 @@ describe('database schema', () => {
         const columns = Object.keys(focusSessions);
         expect(columns).toContain('id');
         expect(columns).toContain('userId');
-        expect(columns).toContain('projectId');
         expect(columns).toContain('focusMode');
         expect(columns).toContain('task');
         expect(columns).toContain('startedAt');
         expect(columns).toContain('status');
+    });
+
+    it('defines session_projects junction table with expected columns', () => {
+        const columns = Object.keys(sessionProjects);
+        expect(columns).toContain('sessionId');
+        expect(columns).toContain('projectId');
     });
 
     it('defines github_connections table with expected columns', () => {

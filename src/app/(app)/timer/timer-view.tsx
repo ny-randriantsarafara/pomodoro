@@ -64,8 +64,10 @@ export function TimerView({ projects }: TimerViewProps) {
                                     remainingSeconds={remainingSeconds}
                                     focusMode={activeTimer.focusMode}
                                     task={activeTimer.task}
-                                    projectName={activeTimer.projectName}
-                                    projectColor={activeTimer.projectColor}
+                                    projects={activeTimer.projects.map((p) => ({
+                                        name: p.name,
+                                        color: p.color,
+                                    }))}
                                 />
                             </div>
                         )}

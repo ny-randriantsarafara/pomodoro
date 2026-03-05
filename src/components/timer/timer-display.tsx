@@ -14,8 +14,7 @@ export interface TimerDisplayProps {
     readonly remainingSeconds: number;
     readonly focusMode?: FocusMode;
     readonly task?: string;
-    readonly projectName?: string;
-    readonly projectColor?: string;
+    readonly projects?: ReadonlyArray<{ readonly name: string; readonly color: string }>;
     readonly className?: string;
 }
 
@@ -23,8 +22,7 @@ export function TimerDisplay({
     remainingSeconds,
     focusMode,
     task,
-    projectName,
-    projectColor,
+    projects,
     className,
 }: TimerDisplayProps) {
     return (
@@ -50,18 +48,23 @@ export function TimerDisplay({
                     {task}
                 </p>
             )}
-            {projectName !== undefined && (
-                <div className="flex items-center gap-2">
-                    {projectColor !== undefined && (
+            {projects !== undefined && projects.length > 0 && (
+                <div className="flex flex-wrap items-center justify-center gap-2">
+                    {projects.map((p, i) => (
                         <span
-                            className="h-2 w-2 shrink-0 rounded-full"
-                            style={{ backgroundColor: projectColor }}
-                            aria-hidden
-                        />
-                    )}
-                    <span className="truncate text-sm text-[var(--text-secondary)]">
-                        {projectName}
-                    </span>
+                            key={i}
+                            className="inline-flex items-center gap-1.5"
+                        >
+                            <span
+                                className="h-2 w-2 shrink-0 rounded-full"
+                                style={{ backgroundColor: p.color }}
+                                aria-hidden
+                            />
+                            <span className="truncate text-sm text-[var(--text-secondary)]">
+                                {p.name}
+                            </span>
+                        </span>
+                    ))}
                 </div>
             )}
         </div>

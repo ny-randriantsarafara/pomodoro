@@ -1,10 +1,14 @@
 import type { FocusMode, SessionStatus } from '@/lib/db/schema';
 
+export interface SessionProjectRef {
+    readonly id: string;
+    readonly name: string;
+    readonly color: string;
+}
+
 export interface StartTimerParams {
     readonly sessionId: string;
-    readonly projectId: string;
-    readonly projectName: string;
-    readonly projectColor: string;
+    readonly projects: ReadonlyArray<SessionProjectRef>;
     readonly task: string;
     readonly focusMode: FocusMode;
     readonly durationSeconds: number;
@@ -18,9 +22,7 @@ export interface TimerConfig {
 
 export interface ActiveTimer {
     readonly sessionId: string;
-    readonly projectId: string;
-    readonly projectName: string;
-    readonly projectColor: string;
+    readonly projects: ReadonlyArray<SessionProjectRef>;
     readonly task: string;
     readonly focusMode: FocusMode;
     readonly startedAt: number;
@@ -36,11 +38,9 @@ export interface DailyLogSummary {
     readonly byMode: Record<FocusMode, number>;
 }
 
-export interface SessionWithProject {
+export interface SessionWithProjects {
     readonly id: string;
-    readonly projectId: string;
-    readonly projectName: string;
-    readonly projectColor: string;
+    readonly projects: ReadonlyArray<SessionProjectRef>;
     readonly focusMode: FocusMode;
     readonly task: string;
     readonly startedAt: Date;

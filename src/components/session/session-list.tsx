@@ -2,10 +2,10 @@
 
 import Link from 'next/link';
 import { SessionCard } from './session-card';
-import type { SessionWithProject } from '@/types';
+import type { SessionWithProjects } from '@/types';
 
 interface SessionListProps {
-    readonly sessions: ReadonlyArray<SessionWithProject>;
+    readonly sessions: ReadonlyArray<SessionWithProjects>;
 }
 
 const STAGGER_DELAY_MS = 80;

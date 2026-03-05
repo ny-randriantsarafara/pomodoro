@@ -3,11 +3,11 @@
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { FOCUS_MODES } from '@/lib/constants';
-import type { SessionWithProject } from '@/types';
+import type { SessionWithProjects } from '@/types';
 import type { BadgeVariant } from '@/components/ui/badge';
 
 interface SessionCardProps {
-    readonly session: SessionWithProject;
+    readonly session: SessionWithProjects;
 }
 
 function formatDuration(seconds: number): string {
@@ -27,7 +27,7 @@ function formatTimeStarted(date: Date): string {
 }
 
 const FOCUS_MODE_BADGE_VARIANT: Record<
-    SessionWithProject['focusMode'],
+    SessionWithProjects['focusMode'],
     BadgeVariant
 > = {
     short: 'short',
@@ -35,7 +35,7 @@ const FOCUS_MODE_BADGE_VARIANT: Record<
     deep: 'deep',
 };
 
-const STATUS_BADGE_VARIANT: Record<SessionWithProject['status'], BadgeVariant> =
+const STATUS_BADGE_VARIANT: Record<SessionWithProjects['status'], BadgeVariant> =
     {
         completed: 'completed',
         interrupted: 'interrupted',
@@ -48,15 +48,22 @@ export function SessionCard({ session }: SessionCardProps) {
     return (
         <Card padding="md" className="animate-[fadeIn_0.3s_ease-out_forwards]">
             <div className="flex flex-col gap-2">
-                <div className="flex items-center gap-2">
-                    <span
-                        className="h-2 w-2 shrink-0 rounded-full"
-                        style={{ backgroundColor: session.projectColor }}
-                        aria-hidden
-                    />
-                    <span className="text-xs text-[var(--text-secondary)]">
-                        {session.projectName}
-                    </span>
+                <div className="flex items-center gap-2 flex-wrap">
+                    {session.projects.map((p) => (
+                        <span
+                            key={p.id}
+                            className="inline-flex items-center gap-1.5"
+                        >
+                            <span
+                                className="h-2 w-2 shrink-0 rounded-full"
+                                style={{ backgroundColor: p.color }}
+                                aria-hidden
+                            />
+                            <span className="text-xs text-[var(--text-secondary)]">
+                                {p.name}
+                            </span>
+                        </span>
+                    ))}
                 </div>
                 <p className="text-sm font-medium text-[var(--text-primary)]">
                     {session.task}

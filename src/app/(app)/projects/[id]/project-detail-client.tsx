@@ -10,12 +10,12 @@ import { Dialog } from '@/components/ui/dialog';
 import { ProjectForm } from '@/components/project/project-form';
 import { FOCUS_MODES } from '@/lib/constants';
 import type { Project } from '@/lib/db/schema';
-import type { SessionWithProject } from '@/types';
+import type { SessionWithProjects } from '@/types';
 import type { FocusMode, SessionStatus } from '@/lib/db/schema';
 
 interface ProjectDetailClientProps {
     readonly project: Project;
-    readonly sessions: ReadonlyArray<SessionWithProject>;
+    readonly sessions: ReadonlyArray<SessionWithProjects>;
 }
 
 function formatDuration(seconds: number): string {

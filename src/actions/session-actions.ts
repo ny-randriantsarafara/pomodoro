@@ -1,21 +1,21 @@
 'use server';
 
 import { db } from '@/lib/db';
-import { focusSessions, projects } from '@/lib/db/schema';
+import { focusSessions, projects, sessionProjects } from '@/lib/db/schema';
 import { requireAuth } from '@/lib/auth-utils';
 import { validateTask } from '@/lib/validators';
 import { FOCUS_MODES } from '@/lib/constants';
-import { eq, and, desc, gte, lt, isNull } from 'drizzle-orm';
+import { eq, and, desc, gte, lt, isNull, inArray } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import type {
     ActionResult,
-    SessionWithProject,
+    SessionWithProjects,
     DailyLogSummary,
 } from '@/types';
 import type { FocusSession, FocusMode } from '@/lib/db/schema';
 
 export async function startSession(
-    projectId: string,
+    projectIds: ReadonlyArray<string>,
     task: string,
     focusMode: FocusMode
 ): Promise<ActionResult<FocusSession>> {
@@ -53,7 +53,6 @@ export async function startSession(
         .insert(focusSessions)
         .values({
             userId: user.id,
-            projectId,
             focusMode,
             task: task.trim(),
             startedAt: new Date(),
@@ -61,6 +60,19 @@ export async function startSession(
             status: 'completed',
         })
         .returning();
+
+    if (!session) {
+        return { success: false, error: 'Failed to create session' };
+    }
+
+    if (projectIds.length > 0) {
+        await db.insert(sessionProjects).values(
+            projectIds.map((pid) => ({
+                sessionId: session.id,
+                projectId: pid,
+            }))
+        );
+    }
 
     revalidatePath('/timer');
     revalidatePath('/log');
@@ -127,7 +139,7 @@ export async function abandonSession(
 
 export async function getSessionsByDate(
     date: Date
-): Promise<ReadonlyArray<SessionWithProject>> {
+): Promise<ReadonlyArray<SessionWithProjects>> {
     const user = await requireAuth();
 
     const startOfDay = new Date(date);
@@ -136,12 +148,9 @@ export async function getSessionsByDate(
     const endOfDay = new Date(date);
     endOfDay.setHours(23, 59, 59, 999);
 
-    const rows = await db
+    const sessionRows = await db
         .select({
             id: focusSessions.id,
-            projectId: focusSessions.projectId,
-            projectName: projects.name,
-            projectColor: projects.color,
             focusMode: focusSessions.focusMode,
             task: focusSessions.task,
             startedAt: focusSessions.startedAt,
@@ -150,7 +159,6 @@ export async function getSessionsByDate(
             status: focusSessions.status,
         })
         .from(focusSessions)
-        .innerJoin(projects, eq(focusSessions.projectId, projects.id))
         .where(
             and(
                 eq(focusSessions.userId, user.id),
@@ -160,7 +168,41 @@ export async function getSessionsByDate(
         )
         .orderBy(desc(focusSessions.startedAt));
 
-    return rows;
+    const sessionIds = sessionRows.map((s) => s.id);
+
+    if (sessionIds.length === 0) return [];
+
+    const projectRows = await db
+        .select({
+            sessionId: sessionProjects.sessionId,
+            projectId: projects.id,
+            projectName: projects.name,
+            projectColor: projects.color,
+        })
+        .from(sessionProjects)
+        .innerJoin(projects, eq(sessionProjects.projectId, projects.id))
+        .where(inArray(sessionProjects.sessionId, sessionIds));
+
+    const projectsBySession = new Map<
+        string,
+        ReadonlyArray<{ readonly id: string; readonly name: string; readonly color: string }>
+    >();
+    for (const row of projectRows) {
+        const existing = projectsBySession.get(row.sessionId) ?? [];
+        projectsBySession.set(row.sessionId, [
+            ...existing,
+            {
+                id: row.projectId,
+                name: row.projectName,
+                color: row.projectColor,
+            },
+        ]);
+    }
+
+    return sessionRows.map((s) => ({
+        ...s,
+        projects: projectsBySession.get(s.id) ?? [],
+    }));
 }
 
 export async function getDailyLogSummary(date: Date): Promise<DailyLogSummary> {
@@ -187,15 +229,12 @@ export async function getDailyLogSummary(date: Date): Promise<DailyLogSummary> {
 
 export async function getSessionsByProject(
     projectId: string
-): Promise<ReadonlyArray<SessionWithProject>> {
+): Promise<ReadonlyArray<SessionWithProjects>> {
     const user = await requireAuth();
 
-    const rows = await db
+    const sessionRows = await db
         .select({
             id: focusSessions.id,
-            projectId: focusSessions.projectId,
-            projectName: projects.name,
-            projectColor: projects.color,
             focusMode: focusSessions.focusMode,
             task: focusSessions.task,
             startedAt: focusSessions.startedAt,
@@ -204,14 +243,48 @@ export async function getSessionsByProject(
             status: focusSessions.status,
         })
         .from(focusSessions)
-        .innerJoin(projects, eq(focusSessions.projectId, projects.id))
+        .innerJoin(sessionProjects, eq(focusSessions.id, sessionProjects.sessionId))
         .where(
             and(
                 eq(focusSessions.userId, user.id),
-                eq(focusSessions.projectId, projectId)
+                eq(sessionProjects.projectId, projectId)
             )
         )
         .orderBy(desc(focusSessions.startedAt));
 
-    return rows;
+    const sessionIds = sessionRows.map((s) => s.id);
+
+    if (sessionIds.length === 0) return [];
+
+    const projectRows = await db
+        .select({
+            sessionId: sessionProjects.sessionId,
+            projectId: projects.id,
+            projectName: projects.name,
+            projectColor: projects.color,
+        })
+        .from(sessionProjects)
+        .innerJoin(projects, eq(sessionProjects.projectId, projects.id))
+        .where(inArray(sessionProjects.sessionId, sessionIds));
+
+    const projectsBySession = new Map<
+        string,
+        ReadonlyArray<{ readonly id: string; readonly name: string; readonly color: string }>
+    >();
+    for (const row of projectRows) {
+        const existing = projectsBySession.get(row.sessionId) ?? [];
+        projectsBySession.set(row.sessionId, [
+            ...existing,
+            {
+                id: row.projectId,
+                name: row.projectName,
+                color: row.projectColor,
+            },
+        ]);
+    }
+
+    return sessionRows.map((s) => ({
+        ...s,
+        projects: projectsBySession.get(s.id) ?? [],
+    }));
 }
