@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { addGithubConnection } from '@/actions/github-actions';
 import { fetchGitHubUsername } from '@/lib/github';
+import { buildAppUrl } from '@/lib/app-url';
 
 const GITHUB_TOKEN_URL = 'https://github.com/login/oauth/access_token';
 
@@ -60,7 +61,7 @@ export async function GET(request: Request) {
 
     if (!code || !state) {
         return NextResponse.redirect(
-            new URL('/settings?error=github_auth_failed', request.url)
+            buildAppUrl('/settings?error=github_auth_failed', request.url)
         );
     }
 
@@ -69,7 +70,7 @@ export async function GET(request: Request) {
     const tokenResult = await exchangeCodeForToken(code);
     if ('error' in tokenResult) {
         return NextResponse.redirect(
-            new URL('/settings?error=github_auth_failed', request.url)
+            buildAppUrl('/settings?error=github_auth_failed', request.url)
         );
     }
 
@@ -83,14 +84,14 @@ export async function GET(request: Request) {
 
         if (!result.success) {
             return NextResponse.redirect(
-                new URL('/settings?error=github_auth_failed', request.url)
+                buildAppUrl('/settings?error=github_auth_failed', request.url)
             );
         }
 
-        return NextResponse.redirect(new URL('/settings', request.url));
+        return NextResponse.redirect(buildAppUrl('/settings', request.url));
     } catch {
         return NextResponse.redirect(
-            new URL('/settings?error=github_auth_failed', request.url)
+            buildAppUrl('/settings?error=github_auth_failed', request.url)
         );
     }
 }
