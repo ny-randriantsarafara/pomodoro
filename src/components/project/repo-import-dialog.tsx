@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition, useMemo } from 'react';
+import { useState, useTransition, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Search, GitBranch, Check, Loader2 } from 'lucide-react';
 import { Dialog } from '@/components/ui/dialog';
@@ -117,6 +117,13 @@ export function RepoImportDialog({
         setError(null);
         onClose();
     }
+
+    useEffect(() => {
+        if (open && preselectedConnectionId) {
+            handleConnectionChange(preselectedConnectionId);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [open, preselectedConnectionId]);
 
     const hasConnections = connections.length > 0;
 
