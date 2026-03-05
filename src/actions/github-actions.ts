@@ -4,7 +4,7 @@ import { db } from '@/lib/db';
 import { githubConnections } from '@/lib/db/schema';
 import { requireAuth } from '@/lib/auth-utils';
 import { validateGithubLabel } from '@/lib/validators';
-import { fetchUserRepos } from '@/lib/github';
+import { fetchUserRepos, refreshGitHubToken } from '@/lib/github';
 import { eq, and } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import type { ActionResult, GitHubRepo } from '@/types';
@@ -23,7 +23,8 @@ export async function getGithubConnections(): Promise<
 export async function addGithubConnection(
     label: string,
     accessToken: string,
-    githubUsername: string
+    githubUsername: string,
+    refreshToken: string | null = null
 ): Promise<ActionResult<GithubConnection>> {
     const user = await requireAuth();
     const labelError = validateGithubLabel(label);
@@ -37,6 +38,7 @@ export async function addGithubConnection(
             label: label.trim(),
             githubUsername,
             accessToken,
+            refreshToken,
         })
         .returning();
     revalidatePath('/settings');
@@ -79,13 +81,37 @@ export async function fetchReposForConnection(
     if (!connection) {
         return { success: false, error: 'Connection not found' };
     }
+
     try {
         const repos = await fetchUserRepos(connection.accessToken);
         return { success: true, data: repos };
-    } catch {
+    } catch (err: unknown) {
+        const status = (err as any)?.status;
+        if (status === 401 && connection.refreshToken) {
+            try {
+                const refreshed = await refreshGitHubToken(connection.refreshToken);
+                if (refreshed) {
+                    await db
+                        .update(githubConnections)
+                        .set({
+                            accessToken: refreshed.accessToken,
+                            ...(refreshed.refreshToken !== null
+                                ? { refreshToken: refreshed.refreshToken }
+                                : {}),
+                        })
+                        .where(eq(githubConnections.id, connectionId));
+
+                    const repos = await fetchUserRepos(refreshed.accessToken);
+                    return { success: true, data: repos };
+                }
+            } catch {
+                // Refresh failed, fall through
+            }
+        }
+
         return {
             success: false,
-            error: 'Failed to fetch repos. Token may be expired.',
+            error: 'Failed to fetch repos. Token may be expired — try reconnecting.',
         };
     }
 }

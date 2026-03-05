@@ -68,6 +68,43 @@ function parseUserLogin(item: unknown): string {
     return loginVal;
 }
 
+export async function refreshGitHubToken(
+    refreshToken: string
+): Promise<{ accessToken: string; refreshToken: string | null } | null> {
+    const clientId = process.env.GITHUB_CONNECTIONS_CLIENT_ID;
+    const clientSecret = process.env.GITHUB_CONNECTIONS_CLIENT_SECRET;
+    if (!clientId || !clientSecret) return null;
+
+    const response = await fetch('https://github.com/login/oauth/access_token', {
+        method: 'POST',
+        headers: {
+            Accept: 'application/json',
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            client_id: clientId,
+            client_secret: clientSecret,
+            grant_type: 'refresh_token',
+            refresh_token: refreshToken,
+        }),
+    });
+
+    if (!response.ok) return null;
+
+    const raw: unknown = await response.json();
+    if (typeof raw !== 'object' || raw === null) return null;
+
+    const accessTokenVal = getProperty(raw, 'access_token');
+    const refreshTokenVal = getProperty(raw, 'refresh_token');
+
+    if (typeof accessTokenVal !== 'string') return null;
+
+    return {
+        accessToken: accessTokenVal,
+        refreshToken: typeof refreshTokenVal === 'string' ? refreshTokenVal : null,
+    };
+}
+
 export async function fetchUserRepos(
     accessToken: string
 ): Promise<ReadonlyArray<GitHubRepo>> {
@@ -82,7 +119,9 @@ export async function fetchUserRepos(
     );
 
     if (!response.ok) {
-        throw new Error(`GitHub API error: ${response.status}`);
+        const err = new Error(`GitHub API error: ${response.status}`);
+        (err as any).status = response.status;
+        throw err;
     }
 
     const raw: unknown = await response.json();

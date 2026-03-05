@@ -1,0 +1,1 @@
+ALTER TABLE "github_connections" ADD COLUMN "refresh_token" text;

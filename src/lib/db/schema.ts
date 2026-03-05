@@ -156,6 +156,7 @@ export const githubConnections = pgTable('github_connections', {
     label: varchar('label', { length: 50 }).notNull(),
     githubUsername: varchar('github_username', { length: 255 }).notNull(),
     accessToken: text('access_token').notNull(),
+    refreshToken: text('refresh_token'),
     createdAt: timestamp('created_at', { mode: 'date' }).defaultNow().notNull(),
 });
 

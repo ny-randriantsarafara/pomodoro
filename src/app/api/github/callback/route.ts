@@ -7,7 +7,7 @@ const GITHUB_TOKEN_URL = 'https://github.com/login/oauth/access_token';
 
 async function exchangeCodeForToken(
     code: string
-): Promise<{ accessToken: string } | { error: string }> {
+): Promise<{ accessToken: string; refreshToken: string | null } | { error: string }> {
     const clientId = process.env.GITHUB_CONNECTIONS_CLIENT_ID;
     const clientSecret = process.env.GITHUB_CONNECTIONS_CLIENT_SECRET;
 
@@ -41,6 +41,10 @@ async function exchangeCodeForToken(
         raw,
         'access_token'
     )?.value;
+    const refreshTokenVal = Object.getOwnPropertyDescriptor(
+        raw,
+        'refresh_token'
+    )?.value;
     const errorVal = Object.getOwnPropertyDescriptor(raw, 'error')?.value;
 
     if (typeof errorVal === 'string') {
@@ -51,7 +55,10 @@ async function exchangeCodeForToken(
         return { error: 'Missing access token' };
     }
 
-    return { accessToken: accessTokenVal };
+    return {
+        accessToken: accessTokenVal,
+        refreshToken: typeof refreshTokenVal === 'string' ? refreshTokenVal : null,
+    };
 }
 
 export async function GET(request: Request) {
@@ -79,7 +86,8 @@ export async function GET(request: Request) {
         const result = await addGithubConnection(
             label,
             tokenResult.accessToken,
-            username
+            username,
+            tokenResult.refreshToken
         );
 
         if (!result.success) {

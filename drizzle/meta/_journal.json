@@ -15,6 +15,13 @@
       "when": 1772729385479,
       "tag": "0001_broken_mad_thinker",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1772739892577,
+      "tag": "0002_same_prodigy",
+      "breakpoints": true
     }
   ]
 }
