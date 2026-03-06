@@ -15,7 +15,7 @@ export default async function SettingsPage({
         getGithubConnections(),
         getProjects(),
     ]);
-    const clientId = process.env.GITHUB_CONNECTIONS_CLIENT_ID ?? '';
+    const clientId = process.env.GH_CONNECTIONS_CLIENT_ID ?? '';
 
     return (
         <div className="mx-auto max-w-3xl flex flex-col gap-8 p-6 lg:p-10">

@@ -8,8 +8,8 @@ const GITHUB_TOKEN_URL = 'https://github.com/login/oauth/access_token';
 async function exchangeCodeForToken(
     code: string
 ): Promise<{ accessToken: string; refreshToken: string | null } | { error: string }> {
-    const clientId = process.env.GITHUB_CONNECTIONS_CLIENT_ID;
-    const clientSecret = process.env.GITHUB_CONNECTIONS_CLIENT_SECRET;
+    const clientId = process.env.GH_CONNECTIONS_CLIENT_ID;
+    const clientSecret = process.env.GH_CONNECTIONS_CLIENT_SECRET;
 
     if (!clientId || !clientSecret) {
         return { error: 'GitHub OAuth not configured' };

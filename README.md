@@ -78,8 +78,8 @@ This is a separate app used for linking GitHub accounts to import repositories a
 These go into your `.env.local` as:
 
 ```
-GITHUB_CONNECTIONS_CLIENT_ID=<Client ID from step 5>
-GITHUB_CONNECTIONS_CLIENT_SECRET=<Client Secret from step 6>
+GH_CONNECTIONS_CLIENT_ID=<Client ID from step 5>
+GH_CONNECTIONS_CLIENT_SECRET=<Client Secret from step 6>
 ```
 
 > **Why two apps?** Auth.js manages the first app internally for sign-in. The second app is managed by the application directly for connecting GitHub accounts to fetch repos. They have different callback URLs and different scopes.
@@ -102,8 +102,8 @@ Then fill in each variable:
 | `AUTH_SECRET`                      | Run `npx auth secret` in the project root. It generates a random secret and writes it to `.env.local`. If it doesn't write automatically, copy the output value.    |
 | `AUTH_GITHUB_ID`                   | Client ID from OAuth App 1 (User Authentication).                                                                                                                   |
 | `AUTH_GITHUB_SECRET`               | Client Secret from OAuth App 1.                                                                                                                                     |
-| `GITHUB_CONNECTIONS_CLIENT_ID`     | Client ID from OAuth App 2 (GitHub Connections).                                                                                                                    |
-| `GITHUB_CONNECTIONS_CLIENT_SECRET` | Client Secret from OAuth App 2.                                                                                                                                     |
+| `GH_CONNECTIONS_CLIENT_ID`     | Client ID from OAuth App 2 (GitHub Connections).                                                                                                                    |
+| `GH_CONNECTIONS_CLIENT_SECRET` | Client Secret from OAuth App 2.                                                                                                                                     |
 
 Your `.env.local` should look like:
 
@@ -112,8 +112,8 @@ DATABASE_URL=postgresql://postgres:postgres@localhost:5432/pomodoro
 AUTH_SECRET=your-generated-secret-here
 AUTH_GITHUB_ID=Ov23li...
 AUTH_GITHUB_SECRET=abc123...
-GITHUB_CONNECTIONS_CLIENT_ID=Ov23li...
-GITHUB_CONNECTIONS_CLIENT_SECRET=def456...
+GH_CONNECTIONS_CLIENT_ID=Ov23li...
+GH_CONNECTIONS_CLIENT_SECRET=def456...
 ```
 
 ---
