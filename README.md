@@ -102,8 +102,10 @@ Then fill in each variable:
 | `AUTH_SECRET`                      | Run `npx auth secret` in the project root. It generates a random secret and writes it to `.env.local`. If it doesn't write automatically, copy the output value.    |
 | `AUTH_GITHUB_ID`                   | Client ID from OAuth App 1 (User Authentication).                                                                                                                   |
 | `AUTH_GITHUB_SECRET`               | Client Secret from OAuth App 1.                                                                                                                                     |
-| `GH_CONNECTIONS_CLIENT_ID`     | Client ID from OAuth App 2 (GitHub Connections).                                                                                                                    |
-| `GH_CONNECTIONS_CLIENT_SECRET` | Client Secret from OAuth App 2.                                                                                                                                     |
+| `AUTH_GOOGLE_ID`                   | Google OAuth Client ID for Google sign-in.                                                                                                                          |
+| `AUTH_GOOGLE_SECRET`               | Google OAuth Client Secret for Google sign-in.                                                                                                                      |
+| `GH_CONNECTIONS_CLIENT_ID`         | Client ID from OAuth App 2 (GitHub Connections).                                                                                                                    |
+| `GH_CONNECTIONS_CLIENT_SECRET`     | Client Secret from OAuth App 2.                                                                                                                                     |
 
 Your `.env.local` should look like:
 
@@ -112,6 +114,8 @@ DATABASE_URL=postgresql://postgres:postgres@localhost:5432/pomodoro
 AUTH_SECRET=your-generated-secret-here
 AUTH_GITHUB_ID=Ov23li...
 AUTH_GITHUB_SECRET=abc123...
+AUTH_GOOGLE_ID=google-client-id
+AUTH_GOOGLE_SECRET=google-client-secret
 GH_CONNECTIONS_CLIENT_ID=Ov23li...
 GH_CONNECTIONS_CLIENT_SECRET=def456...
 ```
