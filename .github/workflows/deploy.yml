@@ -40,40 +40,18 @@ jobs:
     runs-on: ubuntu-latest
     needs: validate
     outputs:
-      vps_user: ${{ steps.values.outputs.vps_user }}
-      vps_host: ${{ steps.values.outputs.vps_host }}
       runtime_env: ${{ steps.values.outputs.runtime_env }}
     steps:
       - name: Collect deploy values
         id: values
         env:
-          VPS_USER: ${{ secrets.VPS_USER }}
-          VPS_HOST: ${{ secrets.VPS_HOST }}
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
-          AUTH_GITHUB_ID: ${{ secrets.AUTH_GITHUB_ID }}
-          AUTH_GITHUB_SECRET: ${{ secrets.AUTH_GITHUB_SECRET }}
-          AUTH_GOOGLE_ID: ${{ secrets.AUTH_GOOGLE_ID }}
-          AUTH_GOOGLE_SECRET: ${{ secrets.AUTH_GOOGLE_SECRET }}
           NEXTAUTH_URL: ${{ vars.NEXTAUTH_URL }}
-          GITHUB_CONNECTIONS_CLIENT_ID: ${{ secrets.GH_CONNECTIONS_CLIENT_ID }}
-          GITHUB_CONNECTIONS_CLIENT_SECRET: ${{ secrets.GH_CONNECTIONS_CLIENT_SECRET }}
         run: |
           {
-            echo "vps_user=$VPS_USER"
-            echo "vps_host=$VPS_HOST"
             echo "runtime_env<<EOF"
             printf '%s\n' \
-              "DATABASE_URL=$DATABASE_URL" \
-              "AUTH_SECRET=$AUTH_SECRET" \
-              "AUTH_GITHUB_ID=$AUTH_GITHUB_ID" \
-              "AUTH_GITHUB_SECRET=$AUTH_GITHUB_SECRET" \
-              "AUTH_GOOGLE_ID=$AUTH_GOOGLE_ID" \
-              "AUTH_GOOGLE_SECRET=$AUTH_GOOGLE_SECRET" \
               "NEXTAUTH_URL=$NEXTAUTH_URL" \
-              "AUTH_TRUST_HOST=true" \
-              "GITHUB_CONNECTIONS_CLIENT_ID=$GITHUB_CONNECTIONS_CLIENT_ID" \
-              "GITHUB_CONNECTIONS_CLIENT_SECRET=$GITHUB_CONNECTIONS_CLIENT_SECRET"
+              "AUTH_TRUST_HOST=true"
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
 
@@ -83,8 +61,6 @@ jobs:
     if: github.ref == 'refs/heads/main'
     uses: ny-randriantsarafara/vps-services/.github/workflows/deploy-compose.yml@main
     with:
-      vps_user: ${{ needs.prepare-deploy.outputs.vps_user }}
-      vps_host: ${{ needs.prepare-deploy.outputs.vps_host }}
       deploy_dir: /home/deploy/apps/pomodoro
       compose_file: deploy/docker-compose.yml
       services: pomodoro
@@ -93,5 +69,16 @@ jobs:
       health_retries: 15
       health_interval: 5
     secrets:
+      vps_user_secret: ${{ secrets.VPS_USER }}
+      vps_host_secret: ${{ secrets.VPS_HOST }}
+      runtime_env_secret: |
+        DATABASE_URL=${{ secrets.DATABASE_URL }}
+        AUTH_SECRET=${{ secrets.AUTH_SECRET }}
+        AUTH_GITHUB_ID=${{ secrets.AUTH_GITHUB_ID }}
+        AUTH_GITHUB_SECRET=${{ secrets.AUTH_GITHUB_SECRET }}
+        AUTH_GOOGLE_ID=${{ secrets.AUTH_GOOGLE_ID }}
+        AUTH_GOOGLE_SECRET=${{ secrets.AUTH_GOOGLE_SECRET }}
+        GITHUB_CONNECTIONS_CLIENT_ID=${{ secrets.GH_CONNECTIONS_CLIENT_ID }}
+        GITHUB_CONNECTIONS_CLIENT_SECRET=${{ secrets.GH_CONNECTIONS_CLIENT_SECRET }}
       vps_ssh_key: ${{ secrets.VPS_SSH_KEY }}
       vps_host_key: ${{ secrets.VPS_HOST_KEY }}
