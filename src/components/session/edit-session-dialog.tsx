@@ -61,11 +61,12 @@ export function EditSessionDialog({ open, onClose, session }: EditSessionDialogP
         });
 
         if (result.success) {
+            setIsSubmitting(false);
             handleClose();
         } else {
             setError(result.error);
+            setIsSubmitting(false);
         }
-        setIsSubmitting(false);
     };
 
     return (
