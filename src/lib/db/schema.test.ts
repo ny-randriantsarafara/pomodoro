@@ -45,6 +45,7 @@ describe('database schema', () => {
         expect(columns).toContain('userId');
         expect(columns).toContain('focusMode');
         expect(columns).toContain('task');
+        expect(columns).toContain('description');
         expect(columns).toContain('startedAt');
         expect(columns).toContain('status');
     });

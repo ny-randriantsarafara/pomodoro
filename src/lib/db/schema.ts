@@ -120,6 +120,7 @@ export const focusSessions = pgTable('focus_sessions', {
         .references(() => users.id, { onDelete: 'cascade' }),
     focusMode: focusModeEnum('focus_mode').notNull(),
     task: text('task').notNull(),
+    description: text('description'),
     startedAt: timestamp('started_at', { mode: 'date' }).notNull(),
     completedAt: timestamp('completed_at', { mode: 'date' }),
     durationSeconds: integer('duration_seconds').notNull().default(0),
