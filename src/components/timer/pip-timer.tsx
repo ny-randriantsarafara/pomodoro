@@ -53,9 +53,9 @@ export function PipTimer({
                     className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--accent)] text-[#0A0A0B] transition-opacity hover:opacity-80"
                 >
                     {activeTimer.isPaused ? (
-                        <Play className="h-5 w-5" aria-hidden />
+                        <Play className="h-5 w-5" aria-hidden={true} />
                     ) : (
-                        <Pause className="h-5 w-5" aria-hidden />
+                        <Pause className="h-5 w-5" aria-hidden={true} />
                     )}
                 </button>
                 <button
@@ -64,7 +64,7 @@ export function PipTimer({
                     aria-label="Abandon session"
                     className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--danger)] text-[#0A0A0B] transition-opacity hover:opacity-80"
                 >
-                    <X className="h-5 w-5" aria-hidden />
+                    <X className="h-5 w-5" aria-hidden={true} />
                 </button>
             </div>
         </div>
