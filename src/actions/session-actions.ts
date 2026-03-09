@@ -348,3 +348,52 @@ export async function addManualSession(params: {
     revalidatePath('/log');
     return { success: true, data: session };
 }
+
+export async function updateSession(
+    id: string,
+    params: {
+        task: string;
+        description?: string;
+        startedAt: Date;
+        completedAt: Date;
+    }
+): Promise<ActionResult<FocusSession>> {
+    const user = await requireAuth();
+
+    const taskError = validateTask(params.task);
+    if (taskError) {
+        return { success: false, error: taskError };
+    }
+
+    if (params.completedAt <= params.startedAt) {
+        return { success: false, error: 'End time must be after start time' };
+    }
+
+    const durationSeconds = Math.round(
+        (params.completedAt.getTime() - params.startedAt.getTime()) / 1000
+    );
+
+    const [session] = await db
+        .update(focusSessions)
+        .set({
+            task: params.task.trim(),
+            description: params.description?.trim() || null,
+            startedAt: params.startedAt,
+            completedAt: params.completedAt,
+            durationSeconds,
+        })
+        .where(
+            and(
+                eq(focusSessions.id, id),
+                eq(focusSessions.userId, user.id)
+            )
+        )
+        .returning();
+
+    if (!session) {
+        return { success: false, error: 'Session not found' };
+    }
+
+    revalidatePath('/log');
+    return { success: true, data: session };
+}
