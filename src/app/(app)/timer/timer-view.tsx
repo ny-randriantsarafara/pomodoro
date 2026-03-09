@@ -1,10 +1,14 @@
 'use client';
 
+import { useEffect } from 'react';
+import { PictureInPicture2 } from 'lucide-react';
 import { useTimer } from '@/hooks/use-timer';
+import { usePiP } from '@/hooks/use-pip';
 import { TimerRing } from '@/components/timer/timer-ring';
 import { TimerDisplay } from '@/components/timer/timer-display';
 import { TimerControls } from '@/components/timer/timer-controls';
 import { SessionSetup } from '@/components/timer/session-setup';
+import { PipTimer } from '@/components/timer/pip-timer';
 import type { Project } from '@/lib/db/schema';
 
 function formatTime(seconds: number): string {
@@ -29,6 +33,15 @@ export function TimerView({ projects }: TimerViewProps) {
         resumeTimer,
         abandonTimer,
     } = useTimer();
+
+    const { isSupported, pipWindow, openPiP, closePiP } = usePiP();
+
+    // Close PiP when session ends
+    useEffect(() => {
+        if (phase !== 'focus') {
+            closePiP();
+        }
+    }, [phase, closePiP]);
 
     return (
         <div className="relative flex flex-col items-center justify-center gap-8 transition-opacity duration-300">
@@ -98,10 +111,35 @@ export function TimerView({ projects }: TimerViewProps) {
                 />
             )}
 
+            {/* PiP toggle — only when focus session active and browser supports it */}
+            {phase === 'focus' && activeTimer && isSupported && (
+                <button
+                    type="button"
+                    onClick={pipWindow ? closePiP : () => void openPiP()}
+                    aria-label={pipWindow ? 'Close picture-in-picture' : 'Open picture-in-picture'}
+                    className="flex items-center gap-1.5 text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
+                >
+                    <PictureInPicture2 className="h-4 w-4" aria-hidden={true} />
+                    {pipWindow ? 'Close PiP' : 'Pop out timer'}
+                </button>
+            )}
+
             {phase === 'break' && (
                 <p className="text-sm text-[var(--text-secondary)]">
                     Take a break. You&apos;ll return to setup when done.
                 </p>
+            )}
+
+            {/* PiP portal */}
+            {pipWindow && activeTimer && phase === 'focus' && (
+                <PipTimer
+                    pipWindow={pipWindow}
+                    remainingSeconds={remainingSeconds}
+                    activeTimer={activeTimer}
+                    onPause={pauseTimer}
+                    onResume={resumeTimer}
+                    onAbandon={abandonTimer}
+                />
             )}
         </div>
     );
