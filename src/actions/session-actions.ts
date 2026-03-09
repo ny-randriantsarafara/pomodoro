@@ -349,6 +349,37 @@ export async function addManualSession(params: {
     return { success: true, data: session };
 }
 
+export async function deleteSession(
+    id: string
+): Promise<ActionResult> {
+    const user = await requireAuth();
+
+    const [session] = await db
+        .select({ id: focusSessions.id })
+        .from(focusSessions)
+        .where(
+            and(
+                eq(focusSessions.id, id),
+                eq(focusSessions.userId, user.id)
+            )
+        );
+
+    if (!session) {
+        return { success: false, error: 'Session not found' };
+    }
+
+    await db
+        .delete(sessionProjects)
+        .where(eq(sessionProjects.sessionId, id));
+
+    await db
+        .delete(focusSessions)
+        .where(eq(focusSessions.id, id));
+
+    revalidatePath('/log');
+    return { success: true, data: undefined };
+}
+
 export async function updateSession(
     id: string,
     params: {
