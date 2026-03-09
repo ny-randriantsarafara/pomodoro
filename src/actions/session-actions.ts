@@ -365,6 +365,10 @@ export async function updateSession(
         return { success: false, error: taskError };
     }
 
+    if (isNaN(params.startedAt.getTime()) || isNaN(params.completedAt.getTime())) {
+        return { success: false, error: 'Invalid date values' };
+    }
+
     if (params.completedAt <= params.startedAt) {
         return { success: false, error: 'End time must be after start time' };
     }
