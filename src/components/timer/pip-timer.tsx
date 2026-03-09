@@ -3,12 +3,7 @@
 import { createPortal } from 'react-dom';
 import { Pause, Play, X } from 'lucide-react';
 import type { ActiveTimer } from '@/types';
-
-function formatTime(seconds: number): string {
-    const m = Math.floor(seconds / 60);
-    const s = seconds % 60;
-    return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-}
+import { formatTime } from '@/lib/format-time';
 
 export interface PipTimerProps {
     readonly pipWindow: Window;
