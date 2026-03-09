@@ -2,7 +2,8 @@ import {
     getSessionsByDate,
     getDailyLogSummary,
 } from '@/actions/session-actions';
-import { DatePicker } from '@/components/session/date-picker';
+import { getProjects } from '@/actions/project-actions';
+import { LogHeader } from '@/components/session/log-header';
 import { DailySummary } from '@/components/session/daily-summary';
 import { SessionList } from '@/components/session/session-list';
 
@@ -26,9 +27,10 @@ export default async function LogPage({ searchParams }: LogPageProps) {
     const params = await searchParams;
     const date = parseDateParam(params.date);
 
-    const [sessions, summary] = await Promise.all([
+    const [sessions, summary, projects] = await Promise.all([
         getSessionsByDate(date),
         getDailyLogSummary(date),
+        getProjects(),
     ]);
 
     return (
@@ -36,7 +38,7 @@ export default async function LogPage({ searchParams }: LogPageProps) {
             <h1 className="font-[family-name:var(--font-display)] text-4xl font-normal text-[var(--text-primary)]">
                 Daily Log
             </h1>
-            <DatePicker currentDate={date} />
+            <LogHeader currentDate={date} projects={projects} />
             <DailySummary summary={summary} />
             <SessionList sessions={sessions} />
         </div>
