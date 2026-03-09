@@ -47,6 +47,7 @@ export interface SessionWithProjects {
     readonly completedAt: Date | null;
     readonly durationSeconds: number;
     readonly status: SessionStatus;
+    readonly description: string | null;
 }
 
 export interface GitHubRepo {

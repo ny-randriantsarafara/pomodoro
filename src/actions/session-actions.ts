@@ -17,7 +17,8 @@ import type { FocusSession, FocusMode } from '@/lib/db/schema';
 export async function startSession(
     projectIds: ReadonlyArray<string>,
     task: string,
-    focusMode: FocusMode
+    focusMode: FocusMode,
+    description?: string
 ): Promise<ActionResult<FocusSession>> {
     const user = await requireAuth();
 
@@ -55,6 +56,7 @@ export async function startSession(
             userId: user.id,
             focusMode,
             task: task.trim(),
+            description: description?.trim() || null,
             startedAt: new Date(),
             durationSeconds,
             status: 'completed',
@@ -153,6 +155,7 @@ export async function getSessionsByDate(
             id: focusSessions.id,
             focusMode: focusSessions.focusMode,
             task: focusSessions.task,
+            description: focusSessions.description,
             startedAt: focusSessions.startedAt,
             completedAt: focusSessions.completedAt,
             durationSeconds: focusSessions.durationSeconds,
@@ -237,6 +240,7 @@ export async function getSessionsByProject(
             id: focusSessions.id,
             focusMode: focusSessions.focusMode,
             task: focusSessions.task,
+            description: focusSessions.description,
             startedAt: focusSessions.startedAt,
             completedAt: focusSessions.completedAt,
             durationSeconds: focusSessions.durationSeconds,
