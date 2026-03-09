@@ -10,12 +10,7 @@ import { TimerControls } from '@/components/timer/timer-controls';
 import { SessionSetup } from '@/components/timer/session-setup';
 import { PipTimer } from '@/components/timer/pip-timer';
 import type { Project } from '@/lib/db/schema';
-
-function formatTime(seconds: number): string {
-    const m = Math.floor(seconds / 60);
-    const s = seconds % 60;
-    return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-}
+import { formatTime } from '@/lib/format-time';
 
 export interface TimerViewProps {
     readonly projects: ReadonlyArray<Project>;
@@ -115,7 +110,7 @@ export function TimerView({ projects }: TimerViewProps) {
             {phase === 'focus' && activeTimer && isSupported && (
                 <button
                     type="button"
-                    onClick={pipWindow ? closePiP : () => void openPiP()}
+                    onClick={pipWindow ? closePiP : () => { openPiP().catch(console.error); }}
                     aria-label={pipWindow ? 'Close picture-in-picture' : 'Open picture-in-picture'}
                     className="flex items-center gap-1.5 text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
                 >
