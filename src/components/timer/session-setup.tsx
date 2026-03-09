@@ -20,6 +20,7 @@ export interface SessionSetupProps {
 export function SessionSetup({ projects, onStart }: SessionSetupProps) {
     const [selectedIds, setSelectedIds] = useState<ReadonlyArray<string>>([]);
     const [task, setTask] = useState('');
+    const [description, setDescription] = useState('');
     const [focusMode, setFocusMode] = useState<FocusMode>('short');
     const [error, setError] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -53,7 +54,7 @@ export function SessionSetup({ projects, onStart }: SessionSetupProps) {
         const trimmedTask = task.trim();
         setIsSubmitting(true);
 
-        const result = await startSession(selectedIds, trimmedTask, focusMode);
+        const result = await startSession(selectedIds, trimmedTask, focusMode, description.trim() || undefined);
 
         if (result.success) {
             const selectedProjects = projects
@@ -150,6 +151,21 @@ export function SessionSetup({ projects, onStart }: SessionSetupProps) {
                 disabled={isSubmitting}
                 required
             />
+
+            <div className="flex flex-col gap-2">
+                <label className="text-sm font-medium text-[var(--text-primary)]">
+                    Description{' '}
+                    <span className="text-[var(--text-secondary)] font-normal">(optional)</span>
+                </label>
+                <textarea
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="What specifically are you doing?"
+                    rows={2}
+                    disabled={isSubmitting}
+                    className="w-full resize-none rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-secondary)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] disabled:opacity-50"
+                />
+            </div>
 
             {error && <p className="text-sm text-[var(--danger)]">{error}</p>}
 
