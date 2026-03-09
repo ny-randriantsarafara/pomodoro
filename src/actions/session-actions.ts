@@ -292,3 +292,59 @@ export async function getSessionsByProject(
         projects: projectsBySession.get(s.id) ?? [],
     }));
 }
+
+export async function addManualSession(params: {
+    task: string;
+    focusMode: FocusMode;
+    projectIds: ReadonlyArray<string>;
+    description?: string;
+    date: Date;
+}): Promise<ActionResult<FocusSession>> {
+    const user = await requireAuth();
+
+    const taskError = validateTask(params.task);
+    if (taskError) {
+        return { success: false, error: taskError };
+    }
+
+    if (!(params.focusMode in FOCUS_MODES)) {
+        return { success: false, error: 'Invalid focus mode' };
+    }
+
+    const durationSeconds = FOCUS_MODES[params.focusMode].workMinutes * 60;
+
+    const startedAt = new Date(params.date);
+    startedAt.setSeconds(0, 0);
+
+    const completedAt = new Date(startedAt.getTime() + durationSeconds * 1000);
+
+    const [session] = await db
+        .insert(focusSessions)
+        .values({
+            userId: user.id,
+            focusMode: params.focusMode,
+            task: params.task.trim(),
+            description: params.description?.trim() || null,
+            startedAt,
+            completedAt,
+            durationSeconds,
+            status: 'completed',
+        })
+        .returning();
+
+    if (!session) {
+        return { success: false, error: 'Failed to create session' };
+    }
+
+    if (params.projectIds.length > 0) {
+        await db.insert(sessionProjects).values(
+            params.projectIds.map((pid) => ({
+                sessionId: session.id,
+                projectId: pid,
+            }))
+        );
+    }
+
+    revalidatePath('/log');
+    return { success: true, data: session };
+}
