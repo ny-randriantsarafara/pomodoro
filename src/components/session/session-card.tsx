@@ -68,6 +68,11 @@ export function SessionCard({ session }: SessionCardProps) {
                 <p className="text-sm font-medium text-[var(--text-primary)]">
                     {session.task}
                 </p>
+                {session.description && (
+                    <p className="text-xs text-[var(--text-secondary)]">
+                        {session.description}
+                    </p>
+                )}
                 <div className="flex flex-wrap items-center gap-2">
                     <Badge
                         variant={FOCUS_MODE_BADGE_VARIANT[session.focusMode]}
