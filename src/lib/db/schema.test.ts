@@ -98,6 +98,7 @@ describe('database schema', () => {
         expect(columns).toContain('actualPomodoros');
         expect(columns).toContain('createdAt');
         expect(columns).toContain('updatedAt');
+        expect(tasks.userId.notNull).toBe(true);
     });
 
     it('defines user_settings table with expected columns', () => {

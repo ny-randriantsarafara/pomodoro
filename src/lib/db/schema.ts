@@ -104,6 +104,7 @@ export const activeSessionPhaseEnum = pgEnum('active_session_phase', [
 export const tasks = pgTable('tasks', {
     id: uuid('id').defaultRandom().primaryKey(),
     userId: uuid('user_id')
+        .notNull()
         .references(() => users.id, { onDelete: 'cascade' }),
     title: varchar('title', { length: 200 }).notNull(),
     note: text('note'),
