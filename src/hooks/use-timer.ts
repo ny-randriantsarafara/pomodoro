@@ -22,7 +22,9 @@ import {
     createIdleTimerState,
     reduceTimerState,
     type TimerPhase,
+    type TimerSessionMode,
     type TimerState,
+    shouldRestorePersistedTimer,
 } from './timer-state';
 
 export interface UseTimerReturn {
@@ -41,7 +43,7 @@ export interface UseTimerReturn {
 
 interface UseTimerOptions {
     readonly syncEnabled?: boolean;
-    readonly sessionMode?: 'signed-in' | 'guest';
+    readonly sessionMode?: TimerSessionMode;
 }
 
 const TICK_MS = 1000;
@@ -107,10 +109,15 @@ function appendGuestSessionRecord(params: {
     });
 }
 
-function restoreTimerState(): TimerState {
+function restoreTimerState(sessionMode: TimerSessionMode): TimerState {
     const stored = loadTimer();
 
     if (!stored) {
+        return createIdleTimerState();
+    }
+
+    if (!shouldRestorePersistedTimer(sessionMode, stored)) {
+        clearTimer();
         return createIdleTimerState();
     }
 
@@ -143,7 +150,7 @@ export function useTimer(options: UseTimerOptions = {}): UseTimerReturn {
     } = options;
     const [timerState, dispatch] = useReducer(
         reduceTimerState,
-        undefined,
+        sessionMode,
         restoreTimerState
     );
     const transitionInFlightRef = useRef(false);

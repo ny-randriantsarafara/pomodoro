@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
     buildTimerStateFromSyncedSession,
     reduceTimerState,
+    shouldRestorePersistedTimer,
     type TimerState,
 } from './timer-state';
 
@@ -77,5 +78,39 @@ describe('reduceTimerState', () => {
             ...idleState,
             justCompletedFocus: true,
         });
+    });
+});
+
+describe('shouldRestorePersistedTimer', () => {
+    it('does not restore guest timers into the signed-in timer route', () => {
+        expect(
+            shouldRestorePersistedTimer('signed-in', {
+                sessionId: 'guest-123',
+                projects: [],
+                task: 'Draft outline',
+                focusMode: 'short',
+                startedAt: 0,
+                durationSeconds: 1500,
+                isPaused: false,
+                pausedAt: null,
+                totalPausedSeconds: 0,
+            })
+        ).toBe(false);
+    });
+
+    it('restores guest timers inside the guest timer route', () => {
+        expect(
+            shouldRestorePersistedTimer('guest', {
+                sessionId: 'guest-123',
+                projects: [],
+                task: 'Draft outline',
+                focusMode: 'short',
+                startedAt: 0,
+                durationSeconds: 1500,
+                isPaused: false,
+                pausedAt: null,
+                totalPausedSeconds: 0,
+            })
+        ).toBe(true);
     });
 });

@@ -20,6 +20,8 @@ export interface TimerState {
     readonly justCompletedFocus: boolean;
 }
 
+export type TimerSessionMode = 'signed-in' | 'guest';
+
 export type TimerAction =
     | { readonly type: 'apply-synced-session'; readonly session: ActiveSessionSnapshot }
     | { readonly type: 'clear-completed-focus' }
@@ -69,6 +71,13 @@ export function createIdleTimerState(): TimerState {
         isPaused: false,
         justCompletedFocus: false,
     };
+}
+
+export function shouldRestorePersistedTimer(
+    sessionMode: TimerSessionMode,
+    timer: ActiveTimer
+) {
+    return sessionMode === 'guest' || !timer.sessionId.startsWith('guest-');
 }
 
 export function buildTimerStateFromSyncedSession(

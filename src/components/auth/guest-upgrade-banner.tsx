@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import {
     buildGuestImportPayload,
     hasGuestWorkspaceData,
@@ -23,10 +23,23 @@ export function getGuestUpgradeSummary(workspace: GuestWorkspace | null) {
 }
 
 export function GuestUpgradeBanner() {
-    const summary = useMemo(
-        () => getGuestUpgradeSummary(loadGuestWorkspace()),
-        []
-    );
+    const [summary, setSummary] = useState<ReturnType<
+        typeof getGuestUpgradeSummary
+    >>(null);
+
+    useEffect(() => {
+        const syncSummary = () => {
+            setSummary(getGuestUpgradeSummary(loadGuestWorkspace()));
+        };
+
+        const timeoutId = window.setTimeout(syncSummary, 0);
+        window.addEventListener('storage', syncSummary);
+
+        return () => {
+            window.clearTimeout(timeoutId);
+            window.removeEventListener('storage', syncSummary);
+        };
+    }, []);
 
     if (!summary) {
         return null;
