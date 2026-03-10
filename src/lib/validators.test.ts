@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
     validateProjectName,
     validateTask,
+    validateTaskTitle,
     validateGithubLabel,
     validateColor,
 } from './validators';
@@ -37,6 +38,16 @@ describe('validateTask', () => {
     it('rejects task over 500 characters', () => {
         const long = 'a'.repeat(501);
         expect(validateTask(long)).toContain('at most 500');
+    });
+});
+
+describe('validateTaskTitle', () => {
+    it('returns null for valid title', () => {
+        expect(validateTaskTitle('Plan the rollout')).toBeNull();
+    });
+
+    it('rejects empty string', () => {
+        expect(validateTaskTitle('')).toBe('Task title is required');
     });
 });
 

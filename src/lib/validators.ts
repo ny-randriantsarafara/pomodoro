@@ -38,6 +38,17 @@ export function validateTask(task: string): string | null {
     return null;
 }
 
+export function validateTaskTitle(title: string): string | null {
+    const trimmed = title.trim();
+    if (trimmed.length < TASK_MIN_LENGTH) {
+        return 'Task title is required';
+    }
+    if (trimmed.length > TASK_MAX_LENGTH) {
+        return `Task title must be at most ${TASK_MAX_LENGTH} characters`;
+    }
+    return null;
+}
+
 export function validateGithubLabel(label: string): string | null {
     const trimmed = label.trim();
     if (trimmed.length < GITHUB_LABEL_MIN_LENGTH) {

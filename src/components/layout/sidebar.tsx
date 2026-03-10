@@ -6,6 +6,7 @@ import {
     Clock,
     FolderKanban,
     Settings,
+    ListTodo,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -13,6 +14,7 @@ import { UserMenu } from './user-menu';
 
 const navItems = [
     { href: '/timer', label: 'Timer', icon: Clock },
+    { href: '/tasks', label: 'Tasks', icon: ListTodo },
     { href: '/log', label: 'Log', icon: CalendarDays },
     { href: '/stats', label: 'Stats', icon: BarChart3 },
     { href: '/projects', label: 'Projects', icon: FolderKanban },
