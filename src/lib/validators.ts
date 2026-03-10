@@ -5,7 +5,16 @@ import {
     PROJECT_NAME_MIN_LENGTH,
     GITHUB_LABEL_MAX_LENGTH,
     GITHUB_LABEL_MIN_LENGTH,
+    TIMER_LONG_BREAK_FREQUENCY_MAX,
+    TIMER_LONG_BREAK_FREQUENCY_MIN,
+    TIMER_LONG_BREAK_MINUTES_MAX,
+    TIMER_LONG_BREAK_MINUTES_MIN,
+    TIMER_SHORT_BREAK_MINUTES_MAX,
+    TIMER_SHORT_BREAK_MINUTES_MIN,
+    TIMER_WORK_MINUTES_MAX,
+    TIMER_WORK_MINUTES_MIN,
 } from './constants';
+import type { TimerSettings } from '@/types';
 
 export function validateProjectName(name: string): string | null {
     const trimmed = name.trim();
@@ -44,5 +53,39 @@ export function validateColor(color: string): string | null {
     if (!/^#[0-9A-Fa-f]{6}$/.test(color)) {
         return 'Color must be a valid hex color (e.g. #A0A0FF)';
     }
+    return null;
+}
+
+export function validateTimerSettings(
+    settings: TimerSettings
+): string | null {
+    if (
+        settings.workMinutes < TIMER_WORK_MINUTES_MIN ||
+        settings.workMinutes > TIMER_WORK_MINUTES_MAX
+    ) {
+        return `Work duration must be between ${TIMER_WORK_MINUTES_MIN} and ${TIMER_WORK_MINUTES_MAX} minutes`;
+    }
+
+    if (
+        settings.shortBreakMinutes < TIMER_SHORT_BREAK_MINUTES_MIN ||
+        settings.shortBreakMinutes > TIMER_SHORT_BREAK_MINUTES_MAX
+    ) {
+        return `Short break duration must be between ${TIMER_SHORT_BREAK_MINUTES_MIN} and ${TIMER_SHORT_BREAK_MINUTES_MAX} minutes`;
+    }
+
+    if (
+        settings.longBreakMinutes < TIMER_LONG_BREAK_MINUTES_MIN ||
+        settings.longBreakMinutes > TIMER_LONG_BREAK_MINUTES_MAX
+    ) {
+        return `Long break duration must be between ${TIMER_LONG_BREAK_MINUTES_MIN} and ${TIMER_LONG_BREAK_MINUTES_MAX} minutes`;
+    }
+
+    if (
+        settings.longBreakFrequency < TIMER_LONG_BREAK_FREQUENCY_MIN ||
+        settings.longBreakFrequency > TIMER_LONG_BREAK_FREQUENCY_MAX
+    ) {
+        return `Long break frequency must be between ${TIMER_LONG_BREAK_FREQUENCY_MIN} and ${TIMER_LONG_BREAK_FREQUENCY_MAX} sessions`;
+    }
+
     return null;
 }

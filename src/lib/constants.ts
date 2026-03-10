@@ -13,5 +13,13 @@ export const PROJECT_NAME_MAX_LENGTH = 100;
 export const PROJECT_NAME_MIN_LENGTH = 1;
 export const GITHUB_LABEL_MAX_LENGTH = 50;
 export const GITHUB_LABEL_MIN_LENGTH = 1;
+export const TIMER_WORK_MINUTES_MIN = 1;
+export const TIMER_WORK_MINUTES_MAX = 180;
+export const TIMER_SHORT_BREAK_MINUTES_MIN = 1;
+export const TIMER_SHORT_BREAK_MINUTES_MAX = 60;
+export const TIMER_LONG_BREAK_MINUTES_MIN = 1;
+export const TIMER_LONG_BREAK_MINUTES_MAX = 90;
+export const TIMER_LONG_BREAK_FREQUENCY_MIN = 1;
+export const TIMER_LONG_BREAK_FREQUENCY_MAX = 12;
 
 export const TIMER_STORAGE_KEY = 'pomodoro-active-timer';

@@ -20,6 +20,15 @@ export interface TimerConfig {
     readonly label: string;
 }
 
+export interface TimerSettings {
+    readonly workMinutes: number;
+    readonly shortBreakMinutes: number;
+    readonly longBreakMinutes: number;
+    readonly longBreakFrequency: number;
+    readonly autoStartBreaks: boolean;
+    readonly autoStartFocusSessions: boolean;
+}
+
 export interface ActiveTimer {
     readonly sessionId: string;
     readonly projects: ReadonlyArray<SessionProjectRef>;
