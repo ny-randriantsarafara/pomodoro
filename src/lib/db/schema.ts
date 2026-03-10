@@ -5,6 +5,7 @@ import {
     text,
     timestamp,
     integer,
+    boolean,
     pgEnum,
     uniqueIndex,
     primaryKey,
@@ -86,7 +87,37 @@ export const sessionStatusEnum = pgEnum('session_status', [
     'abandoned',
 ]);
 
+export const taskStatusEnum = pgEnum('task_status', [
+    'active',
+    'completed',
+    'archived',
+]);
+
+export const activeSessionPhaseEnum = pgEnum('active_session_phase', [
+    'focus',
+    'shortBreak',
+    'longBreak',
+]);
+
 // Domain tables
+
+export const tasks = pgTable('tasks', {
+    id: uuid('id').defaultRandom().primaryKey(),
+    userId: uuid('user_id')
+        .references(() => users.id, { onDelete: 'cascade' }),
+    title: varchar('title', { length: 200 }).notNull(),
+    note: text('note'),
+    status: taskStatusEnum('status').notNull().default('active'),
+    dueDate: timestamp('due_date', { mode: 'date' }),
+    estimatedPomodoros: integer('estimated_pomodoros'),
+    actualPomodoros: integer('actual_pomodoros').notNull().default(0),
+    createdAt: timestamp('created_at', { mode: 'date' })
+        .defaultNow()
+        .notNull(),
+    updatedAt: timestamp('updated_at', { mode: 'date' })
+        .defaultNow()
+        .notNull(),
+});
 
 export const projects = pgTable(
     'projects',
@@ -149,6 +180,53 @@ export const sessionProjects = pgTable(
 
 export type SessionProject = typeof sessionProjects.$inferSelect;
 
+export const userSettings = pgTable('user_settings', {
+    userId: uuid('user_id')
+        .notNull()
+        .references(() => users.id, { onDelete: 'cascade' })
+        .primaryKey(),
+    workMinutes: integer('work_minutes').notNull().default(25),
+    shortBreakMinutes: integer('short_break_minutes').notNull().default(5),
+    longBreakMinutes: integer('long_break_minutes').notNull().default(15),
+    longBreakFrequency: integer('long_break_frequency').notNull().default(4),
+    autoStartBreaks: boolean('auto_start_breaks').notNull().default(false),
+    autoStartFocusSessions: boolean('auto_start_focus_sessions')
+        .notNull()
+        .default(false),
+    createdAt: timestamp('created_at', { mode: 'date' })
+        .defaultNow()
+        .notNull(),
+    updatedAt: timestamp('updated_at', { mode: 'date' })
+        .defaultNow()
+        .notNull(),
+});
+
+export const activeSessions = pgTable('active_sessions', {
+    userId: uuid('user_id')
+        .notNull()
+        .references(() => users.id, { onDelete: 'cascade' })
+        .primaryKey(),
+    taskId: uuid('task_id').references(() => tasks.id, {
+        onDelete: 'set null',
+    }),
+    phase: activeSessionPhaseEnum('phase').notNull().default('focus'),
+    phaseStartedAt: timestamp('phase_started_at', { mode: 'date' }).notNull(),
+    phaseDurationSeconds: integer('phase_duration_seconds').notNull(),
+    completedFocusSessions: integer('completed_focus_sessions')
+        .notNull()
+        .default(0),
+    isPaused: boolean('is_paused').notNull().default(false),
+    pausedAt: timestamp('paused_at', { mode: 'date' }),
+    totalPausedSeconds: integer('total_paused_seconds').notNull().default(0),
+    version: integer('version').notNull().default(1),
+    createdAt: timestamp('created_at', { mode: 'date' })
+        .defaultNow()
+        .notNull(),
+    updatedAt: timestamp('updated_at', { mode: 'date' })
+        .defaultNow()
+        .notNull(),
+});
+
 export const githubConnections = pgTable('github_connections', {
     id: uuid('id').defaultRandom().primaryKey(),
     userId: uuid('user_id')
@@ -164,8 +242,13 @@ export const githubConnections = pgTable('github_connections', {
 // Type exports
 
 export type User = typeof users.$inferSelect;
+export type Task = typeof tasks.$inferSelect;
 export type Project = typeof projects.$inferSelect;
 export type FocusSession = typeof focusSessions.$inferSelect;
+export type UserSettings = typeof userSettings.$inferSelect;
+export type ActiveSession = typeof activeSessions.$inferSelect;
 export type GithubConnection = typeof githubConnections.$inferSelect;
 export type FocusMode = 'short' | 'average' | 'deep';
 export type SessionStatus = 'completed' | 'interrupted' | 'abandoned';
+export type TaskStatus = 'active' | 'completed' | 'archived';
+export type ActiveSessionPhase = 'focus' | 'shortBreak' | 'longBreak';

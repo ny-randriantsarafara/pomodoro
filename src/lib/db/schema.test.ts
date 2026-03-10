@@ -7,6 +7,11 @@ import {
     githubConnections,
     focusModeEnum,
     sessionStatusEnum,
+    taskStatusEnum,
+    activeSessionPhaseEnum,
+    tasks,
+    userSettings,
+    activeSessions,
 } from './schema';
 
 describe('database schema', () => {
@@ -19,6 +24,22 @@ describe('database schema', () => {
             'completed',
             'interrupted',
             'abandoned',
+        ]);
+    });
+
+    it('defines task status enum with correct values', () => {
+        expect(taskStatusEnum.enumValues).toEqual([
+            'active',
+            'completed',
+            'archived',
+        ]);
+    });
+
+    it('defines active session phase enum with correct values', () => {
+        expect(activeSessionPhaseEnum.enumValues).toEqual([
+            'focus',
+            'shortBreak',
+            'longBreak',
         ]);
     });
 
@@ -63,5 +84,48 @@ describe('database schema', () => {
         expect(columns).toContain('label');
         expect(columns).toContain('githubUsername');
         expect(columns).toContain('accessToken');
+    });
+
+    it('defines tasks table with expected columns', () => {
+        const columns = Object.keys(tasks);
+        expect(columns).toContain('id');
+        expect(columns).toContain('userId');
+        expect(columns).toContain('title');
+        expect(columns).toContain('note');
+        expect(columns).toContain('status');
+        expect(columns).toContain('dueDate');
+        expect(columns).toContain('estimatedPomodoros');
+        expect(columns).toContain('actualPomodoros');
+        expect(columns).toContain('createdAt');
+        expect(columns).toContain('updatedAt');
+    });
+
+    it('defines user_settings table with expected columns', () => {
+        const columns = Object.keys(userSettings);
+        expect(columns).toContain('userId');
+        expect(columns).toContain('workMinutes');
+        expect(columns).toContain('shortBreakMinutes');
+        expect(columns).toContain('longBreakMinutes');
+        expect(columns).toContain('longBreakFrequency');
+        expect(columns).toContain('autoStartBreaks');
+        expect(columns).toContain('autoStartFocusSessions');
+        expect(columns).toContain('createdAt');
+        expect(columns).toContain('updatedAt');
+    });
+
+    it('defines active_sessions table with expected columns', () => {
+        const columns = Object.keys(activeSessions);
+        expect(columns).toContain('userId');
+        expect(columns).toContain('taskId');
+        expect(columns).toContain('phase');
+        expect(columns).toContain('phaseStartedAt');
+        expect(columns).toContain('phaseDurationSeconds');
+        expect(columns).toContain('completedFocusSessions');
+        expect(columns).toContain('isPaused');
+        expect(columns).toContain('pausedAt');
+        expect(columns).toContain('totalPausedSeconds');
+        expect(columns).toContain('version');
+        expect(columns).toContain('createdAt');
+        expect(columns).toContain('updatedAt');
     });
 });
