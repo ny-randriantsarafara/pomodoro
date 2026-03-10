@@ -58,6 +58,82 @@ describe('SessionSetup', () => {
         expect(start).toBeEnabled();
     });
 
+    it('lets a quick task enable start without requiring a saved task', async () => {
+        const user = userEvent.setup();
+        const onStart = vi.fn();
+
+        vi.mocked(startSession).mockResolvedValue({
+            success: true,
+            data: {
+                id: 'session-quick',
+            },
+        } as never);
+
+        vi.mocked(createActiveSession).mockResolvedValue({
+            success: true,
+            data: {
+                sessionId: 'session-quick',
+                taskId: null,
+                taskLabel: 'Ship onboarding polish',
+                phase: 'focus',
+                phaseStartedAt: new Date('2026-03-10T10:00:00.000Z'),
+                phaseDurationSeconds: 1500,
+                completedFocusSessions: 0,
+                isPaused: false,
+                pausedAt: null,
+                totalPausedSeconds: 0,
+                version: 2,
+            },
+        } as never);
+
+        const view = render(
+            <SessionSetup
+                projects={[]}
+                tasks={[]}
+                onStart={onStart}
+            />
+        );
+
+        const quickTaskInput = within(view.container).getByPlaceholderText(
+            "Or type what you're about to work on"
+        );
+        await user.type(quickTaskInput, 'Ship onboarding polish');
+
+        const [startButton] = within(view.container).getAllByRole('button', {
+            name: 'Start',
+        });
+        expect(startButton).toBeEnabled();
+
+        await user.click(startButton);
+
+        await waitFor(() => {
+            expect(startSession).toHaveBeenCalledWith(
+                [],
+                'Ship onboarding polish',
+                'short',
+                undefined
+            );
+        });
+
+        await waitFor(() => {
+            expect(createActiveSession).toHaveBeenCalledWith({
+                taskId: null,
+                phase: 'focus',
+                phaseDurationSeconds: 1500,
+            });
+        });
+
+        expect(onStart).toHaveBeenCalledWith(
+            expect.objectContaining({
+                sessionId: 'session-quick',
+                taskId: undefined,
+                task: 'Ship onboarding polish',
+                activeSessionVersion: 2,
+                projects: [],
+            })
+        );
+    });
+
     it('creates a synced active session after starting a task-backed focus session', async () => {
         const user = userEvent.setup();
         const onStart = vi.fn();

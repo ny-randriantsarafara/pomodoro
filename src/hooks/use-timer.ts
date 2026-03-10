@@ -8,6 +8,7 @@ import {
     getSyncedRemainingSeconds,
     useActiveSessionSync,
 } from './use-active-session-sync';
+import { shouldResetToIdleOnMissingSyncedSession } from './use-timer-sync-guards';
 import { playAlarm, stopAlarm } from '@/lib/alarm';
 import {
     requestNotificationPermission,
@@ -153,6 +154,7 @@ export function useTimer(): UseTimerReturn {
 
     const {
         session: syncedSession,
+        isLoading: isSyncLoading,
         showRemoteUpdate,
         dismissRemoteUpdate,
         runAction,
@@ -231,10 +233,24 @@ export function useTimer(): UseTimerReturn {
             return;
         }
 
-        if (activeTimer?.activeSessionVersion !== undefined || phase === 'break') {
+        if (
+            shouldResetToIdleOnMissingSyncedSession({
+                syncedSession,
+                isSyncLoading,
+                activeSessionVersion: activeTimer?.activeSessionVersion,
+                phase,
+            })
+        ) {
             resetToIdle();
         }
-    }, [activeTimer?.activeSessionVersion, applySyncedSession, phase, resetToIdle, syncedSession]);
+    }, [
+        activeTimer?.activeSessionVersion,
+        applySyncedSession,
+        isSyncLoading,
+        phase,
+        resetToIdle,
+        syncedSession,
+    ]);
 
     useEffect(() => {
         if (!justCompletedFocus) return;

@@ -22,7 +22,10 @@ export function TaskPicker({
     if (activeTasks.length === 0) {
         return (
             <div className="rounded-xl border border-dashed border-[var(--border)] bg-[var(--surface)]/60 p-4 text-sm text-[var(--text-secondary)]">
-                <p>No active tasks yet. Create one first to start a synced focus session.</p>
+                <p>
+                    No active tasks yet. Pick one later, or use a quick task to
+                    start now.
+                </p>
                 <Link
                     href="/tasks"
                     className={cn(

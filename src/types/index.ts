@@ -53,6 +53,8 @@ export interface ActiveSessionSnapshot {
     readonly taskId: string | null;
     readonly sessionId: string | null;
     readonly taskLabel: string | null;
+    readonly focusMode: FocusMode | null;
+    readonly projects: ReadonlyArray<SessionProjectRef>;
     readonly phase: ActiveSessionPhase;
     readonly phaseStartedAt: Date;
     readonly phaseDurationSeconds: number;

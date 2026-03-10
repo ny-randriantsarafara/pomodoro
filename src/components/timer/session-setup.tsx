@@ -4,8 +4,9 @@ import { useState, useCallback, useMemo } from 'react';
 import { X, Search } from 'lucide-react';
 import { abandonSession, startSession } from '@/actions/session-actions';
 import { createActiveSession } from '@/actions/active-session-actions';
-import { FOCUS_MODES } from '@/lib/constants';
+import { FOCUS_MODES, TASK_MAX_LENGTH } from '@/lib/constants';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { ModeSelector } from './mode-selector';
 import { TaskPicker } from './task-picker';
 import { cn } from '@/lib/utils';
@@ -22,6 +23,7 @@ export interface SessionSetupProps {
 export function SessionSetup({ projects, tasks, onStart }: SessionSetupProps) {
     const [selectedIds, setSelectedIds] = useState<ReadonlyArray<string>>([]);
     const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+    const [quickTask, setQuickTask] = useState('');
     const [description, setDescription] = useState('');
     const [focusMode, setFocusMode] = useState<FocusMode>('short');
     const [error, setError] = useState<string | null>(null);
@@ -40,8 +42,10 @@ export function SessionSetup({ projects, tasks, onStart }: SessionSetupProps) {
 
     const selectedTask =
         tasks.find((task) => task.id === selectedTaskId) ?? null;
+    const trimmedQuickTask = quickTask.trim();
+    const sessionTask = selectedTask?.title ?? trimmedQuickTask;
 
-    const canStart = selectedTask !== null && !isSubmitting;
+    const canStart = sessionTask !== '' && !isSubmitting;
 
     const toggleProject = useCallback((id: string) => {
         setSelectedIds((prev) =>
@@ -59,7 +63,7 @@ export function SessionSetup({ projects, tasks, onStart }: SessionSetupProps) {
 
         const result = await startSession(
             selectedIds,
-            selectedTask.title,
+            sessionTask,
             focusMode,
             description.trim() || undefined
         );
@@ -70,7 +74,7 @@ export function SessionSetup({ projects, tasks, onStart }: SessionSetupProps) {
                 .map((p) => ({ id: p.id, name: p.name, color: p.color }));
             const durationSeconds = FOCUS_MODES[focusMode].workMinutes * 60;
             const activeSession = await createActiveSession({
-                taskId: selectedTask.id,
+                taskId: selectedTask?.id ?? null,
                 phase: 'focus',
                 phaseDurationSeconds: durationSeconds,
             });
@@ -84,9 +88,9 @@ export function SessionSetup({ projects, tasks, onStart }: SessionSetupProps) {
 
             onStart({
                 sessionId: result.data.id,
-                taskId: selectedTask.id,
+                taskId: selectedTask?.id,
                 projects: selectedProjects,
-                task: selectedTask.title,
+                task: sessionTask,
                 focusMode,
                 durationSeconds,
                 activeSessionVersion: activeSession.data.version,
@@ -109,11 +113,27 @@ export function SessionSetup({ projects, tasks, onStart }: SessionSetupProps) {
                     onSelect={(task) => setSelectedTaskId(task.id)}
                     disabled={isSubmitting}
                 />
+                <Input
+                    label="Quick task"
+                    placeholder="Or type what you're about to work on"
+                    value={quickTask}
+                    onChange={(event) => setQuickTask(event.target.value)}
+                    maxLength={TASK_MAX_LENGTH}
+                    disabled={isSubmitting}
+                />
                 {selectedTask ? (
                     <p className="text-sm text-[var(--text-secondary)]">
                         Starting a synced focus block for{' '}
                         <span className="font-medium text-[var(--text-primary)]">
                             {selectedTask.title}
+                        </span>
+                        .
+                    </p>
+                ) : trimmedQuickTask ? (
+                    <p className="text-sm text-[var(--text-secondary)]">
+                        Starting a synced focus block for{' '}
+                        <span className="font-medium text-[var(--text-primary)]">
+                            {trimmedQuickTask}
                         </span>
                         .
                     </p>

@@ -57,6 +57,8 @@ export function buildActiveTimerFromSession(
         | 'sessionId'
         | 'taskId'
         | 'taskLabel'
+        | 'focusMode'
+        | 'projects'
         | 'phaseStartedAt'
         | 'phaseDurationSeconds'
         | 'isPaused'
@@ -72,9 +74,9 @@ export function buildActiveTimerFromSession(
     return {
         sessionId: session.sessionId,
         taskId: session.taskId ?? undefined,
-        projects: [],
+        projects: session.projects,
         task: session.taskLabel ?? 'Focus session',
-        focusMode: 'short',
+        focusMode: session.focusMode ?? 'short',
         startedAt: getPhaseTimestampMs(session.phaseStartedAt),
         durationSeconds: session.phaseDurationSeconds,
         isPaused: session.isPaused,

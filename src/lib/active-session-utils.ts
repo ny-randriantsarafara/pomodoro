@@ -1,8 +1,9 @@
 import { DEFAULT_TIMER_SETTINGS } from '@/lib/settings';
 import { transitionToNextPhase } from '@/lib/active-session-machine';
-import type { ActiveSessionPhase } from '@/lib/db/schema';
+import type { ActiveSessionPhase, FocusMode } from '@/lib/db/schema';
 import type {
     ActiveSessionSnapshot,
+    SessionProjectRef,
     TimerSettings,
 } from '@/types';
 
@@ -23,6 +24,8 @@ export interface ActiveSessionRecord {
 interface ActiveSessionMetadata {
     readonly sessionId: string | null;
     readonly taskLabel: string | null;
+    readonly focusMode: FocusMode | null;
+    readonly projects: ReadonlyArray<SessionProjectRef>;
 }
 
 export type ActiveSessionMutation = {
@@ -83,6 +86,8 @@ export function buildActiveSessionSnapshot(
         taskId: session.taskId ?? null,
         sessionId: metadata.sessionId,
         taskLabel: metadata.taskLabel,
+        focusMode: metadata.focusMode,
+        projects: metadata.projects,
         phase: session.phase,
         phaseStartedAt: session.phaseStartedAt,
         phaseDurationSeconds: session.phaseDurationSeconds,

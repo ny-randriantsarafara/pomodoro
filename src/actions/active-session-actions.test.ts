@@ -184,12 +184,28 @@ describe('active session action helpers', () => {
                 {
                     sessionId: 'session-1',
                     taskLabel: 'Write release notes',
+                    focusMode: 'deep',
+                    projects: [
+                        {
+                            id: 'project-1',
+                            name: 'Launch prep',
+                            color: '#A0A0FF',
+                        },
+                    ],
                 }
             )
         ).toMatchObject({
             taskId: 'task-1',
             sessionId: 'session-1',
             taskLabel: 'Write release notes',
+            focusMode: 'deep',
+            projects: [
+                {
+                    id: 'project-1',
+                    name: 'Launch prep',
+                    color: '#A0A0FF',
+                },
+            ],
             version: 2,
         });
     });

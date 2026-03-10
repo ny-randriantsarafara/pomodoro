@@ -14,11 +14,18 @@ import type {
     ActiveSessionRecord,
 } from '@/lib/active-session-utils';
 import type { ActionResult, ActiveSessionSnapshot, TimerSettings } from '@/types';
-import type { ActiveSessionPhase } from '@/lib/db/schema';
+import type {
+    ActiveSessionPhase,
+    FocusMode,
+    Task,
+} from '@/lib/db/schema';
+import type { SessionProjectRef } from '@/types';
 
 interface ActiveSessionMetadata {
     readonly sessionId: string | null;
     readonly taskLabel: string | null;
+    readonly focusMode: FocusMode | null;
+    readonly projects: ReadonlyArray<SessionProjectRef>;
 }
 
 async function loadDependencies() {
@@ -42,6 +49,8 @@ async function loadDependencies() {
         db,
         activeSessions: schema.activeSessions,
         focusSessions: schema.focusSessions,
+        projects: schema.projects,
+        sessionProjects: schema.sessionProjects,
         tasks: schema.tasks,
         userSettings: schema.userSettings,
         and,
@@ -77,13 +86,24 @@ async function getActiveSessionMetadata(
     userId: string,
     taskId: string | null | undefined
 ): Promise<ActiveSessionMetadata> {
-    const { db, focusSessions, tasks, and, desc, eq, isNull } =
+    const {
+        db,
+        focusSessions,
+        projects,
+        sessionProjects,
+        tasks,
+        and,
+        desc,
+        eq,
+        isNull,
+    } =
         await loadDependencies();
 
     const [focusSession] = await db
         .select({
             id: focusSessions.id,
             task: focusSessions.task,
+            focusMode: focusSessions.focusMode,
         })
         .from(focusSessions)
         .where(
@@ -96,9 +116,21 @@ async function getActiveSessionMetadata(
         .limit(1);
 
     if (focusSession) {
+        const projectRows = await db
+            .select({
+                id: projects.id,
+                name: projects.name,
+                color: projects.color,
+            })
+            .from(sessionProjects)
+            .innerJoin(projects, eq(sessionProjects.projectId, projects.id))
+            .where(eq(sessionProjects.sessionId, focusSession.id));
+
         return {
             sessionId: focusSession.id,
             taskLabel: focusSession.task,
+            focusMode: focusSession.focusMode,
+            projects: projectRows,
         };
     }
 
@@ -106,6 +138,8 @@ async function getActiveSessionMetadata(
         return {
             sessionId: null,
             taskLabel: null,
+            focusMode: null,
+            projects: [],
         };
     }
 
@@ -120,7 +154,23 @@ async function getActiveSessionMetadata(
     return {
         sessionId: null,
         taskLabel: task?.title ?? null,
+        focusMode: null,
+        projects: [],
     };
+}
+
+async function findOwnedTask(
+    userId: string,
+    taskId: string
+): Promise<Pick<Task, 'id'> | null> {
+    const { db, tasks, and, eq } = await loadDependencies();
+    const [task] = await db
+        .select({ id: tasks.id })
+        .from(tasks)
+        .where(and(eq(tasks.id, taskId), eq(tasks.userId, userId)))
+        .limit(1);
+
+    return task ?? null;
 }
 
 async function hydrateActiveSessionSnapshot(
@@ -161,6 +211,16 @@ export async function createActiveSession(params: {
     const { requireAuth, db, activeSessions, eq, revalidatePath } =
         await loadDependencies();
     const user = await requireAuth();
+
+    if (params.taskId) {
+        const ownedTask = await findOwnedTask(user.id, params.taskId);
+        if (!ownedTask) {
+            return {
+                success: false,
+                error: 'Task not found.',
+            };
+        }
+    }
 
     const [existing] = await db
         .select()

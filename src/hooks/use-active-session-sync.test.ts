@@ -10,6 +10,14 @@ describe('use-active-session-sync helpers', () => {
             sessionId: 'session-1',
             taskId: 'task-1',
             taskLabel: 'Write release notes',
+            focusMode: 'deep',
+            projects: [
+                {
+                    id: 'project-1',
+                    name: 'Launch prep',
+                    color: '#A0A0FF',
+                },
+            ],
             phase: 'focus',
             phaseStartedAt: new Date('2026-03-10T10:00:00.000Z'),
             phaseDurationSeconds: 1500,
@@ -23,7 +31,14 @@ describe('use-active-session-sync helpers', () => {
             sessionId: 'session-1',
             taskId: 'task-1',
             task: 'Write release notes',
-            focusMode: 'short',
+            focusMode: 'deep',
+            projects: [
+                {
+                    id: 'project-1',
+                    name: 'Launch prep',
+                    color: '#A0A0FF',
+                },
+            ],
             activeSessionVersion: 4,
             isPaused: false,
         });
