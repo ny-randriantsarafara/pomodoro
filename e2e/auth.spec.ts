@@ -10,8 +10,15 @@ test.describe('Sign in page', () => {
         ).toBeVisible();
     });
 
-    test('root page redirects to sign-in', async ({ page }) => {
+    test('root page offers guest mode and sign-in entry points', async ({
+        page,
+    }) => {
         await page.goto('/');
-        await expect(page).toHaveURL(/sign-in/);
+        await expect(
+            page.getByRole('link', { name: /continue as guest/i })
+        ).toBeVisible();
+        await expect(
+            page.getByRole('link', { name: /sign in to sync/i })
+        ).toBeVisible();
     });
 });

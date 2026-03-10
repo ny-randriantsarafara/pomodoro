@@ -15,9 +15,16 @@ import { formatTime } from '@/lib/format-time';
 export interface TimerViewProps {
     readonly projects: ReadonlyArray<Project>;
     readonly tasks: ReadonlyArray<Task>;
+    readonly sessionMode?: 'signed-in' | 'guest';
+    readonly guestLabel?: string;
 }
 
-export function TimerView({ projects, tasks }: TimerViewProps) {
+export function TimerView({
+    projects,
+    tasks,
+    sessionMode = 'signed-in',
+    guestLabel,
+}: TimerViewProps) {
     const {
         activeTimer,
         remainingSeconds,
@@ -30,7 +37,10 @@ export function TimerView({ projects, tasks }: TimerViewProps) {
         pauseTimer,
         resumeTimer,
         stopTimer,
-    } = useTimer();
+    } = useTimer({
+        syncEnabled: sessionMode === 'signed-in',
+        sessionMode,
+    });
 
     const { isSupported, pipWindow, openPiP, closePiP } = usePiP();
 
@@ -56,6 +66,7 @@ export function TimerView({ projects, tasks }: TimerViewProps) {
                             <SessionSetup
                                 projects={projects}
                                 tasks={tasks}
+                                sessionMode={sessionMode}
                                 onStart={startTimer}
                             />
                         </div>
@@ -109,6 +120,12 @@ export function TimerView({ projects, tasks }: TimerViewProps) {
                     onStop={stopTimer}
                 />
             )}
+
+            {sessionMode === 'guest' && phase === 'idle' && guestLabel ? (
+                <p className="text-sm text-[var(--text-secondary)]">
+                    {guestLabel}
+                </p>
+            ) : null}
 
             {showRemoteUpdate && (
                 <p className="text-sm text-[var(--text-secondary)]">

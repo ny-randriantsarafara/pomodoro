@@ -105,6 +105,7 @@ function isActiveTimer(value: unknown): value is ActiveTimer {
         typeof getProperty(value, 'sessionId') === 'string' &&
         Array.isArray(getProperty(value, 'projects')) &&
         typeof getProperty(value, 'task') === 'string' &&
+        isStringOrNull(getProperty(value, 'description')) &&
         (getProperty(value, 'focusMode') === 'short' ||
             getProperty(value, 'focusMode') === 'average' ||
             getProperty(value, 'focusMode') === 'deep') &&

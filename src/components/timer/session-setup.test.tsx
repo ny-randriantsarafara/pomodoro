@@ -62,34 +62,11 @@ describe('SessionSetup', () => {
         const user = userEvent.setup();
         const onStart = vi.fn();
 
-        vi.mocked(startSession).mockResolvedValue({
-            success: true,
-            data: {
-                id: 'session-quick',
-            },
-        } as never);
-
-        vi.mocked(createActiveSession).mockResolvedValue({
-            success: true,
-            data: {
-                sessionId: 'session-quick',
-                taskId: null,
-                taskLabel: 'Ship onboarding polish',
-                phase: 'focus',
-                phaseStartedAt: new Date('2026-03-10T10:00:00.000Z'),
-                phaseDurationSeconds: 1500,
-                completedFocusSessions: 0,
-                isPaused: false,
-                pausedAt: null,
-                totalPausedSeconds: 0,
-                version: 2,
-            },
-        } as never);
-
         const view = render(
             <SessionSetup
                 projects={[]}
                 tasks={[]}
+                sessionMode="guest"
                 onStart={onStart}
             />
         );
@@ -106,30 +83,15 @@ describe('SessionSetup', () => {
 
         await user.click(startButton);
 
-        await waitFor(() => {
-            expect(startSession).toHaveBeenCalledWith(
-                [],
-                'Ship onboarding polish',
-                'short',
-                undefined,
-                undefined
-            );
-        });
-
-        await waitFor(() => {
-            expect(createActiveSession).toHaveBeenCalledWith({
-                taskId: null,
-                phase: 'focus',
-                phaseDurationSeconds: 1500,
-            });
-        });
+        expect(startSession).not.toHaveBeenCalled();
+        expect(createActiveSession).not.toHaveBeenCalled();
 
         expect(onStart).toHaveBeenCalledWith(
             expect.objectContaining({
-                sessionId: 'session-quick',
+                sessionId: expect.stringMatching(/^guest-/),
                 taskId: undefined,
                 task: 'Ship onboarding polish',
-                activeSessionVersion: 2,
+                description: undefined,
                 projects: [],
             })
         );

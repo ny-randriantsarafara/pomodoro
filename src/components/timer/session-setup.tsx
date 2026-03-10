@@ -17,10 +17,16 @@ import type { StartTimerParams } from '@/types';
 export interface SessionSetupProps {
     readonly projects: ReadonlyArray<Project>;
     readonly tasks: ReadonlyArray<Task>;
+    readonly sessionMode?: 'signed-in' | 'guest';
     readonly onStart: (params: StartTimerParams) => void;
 }
 
-export function SessionSetup({ projects, tasks, onStart }: SessionSetupProps) {
+export function SessionSetup({
+    projects,
+    tasks,
+    sessionMode = 'signed-in',
+    onStart,
+}: SessionSetupProps) {
     const [selectedIds, setSelectedIds] = useState<ReadonlyArray<string>>([]);
     const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
     const [quickTask, setQuickTask] = useState('');
@@ -59,6 +65,21 @@ export function SessionSetup({ projects, tasks, onStart }: SessionSetupProps) {
         setError(null);
         if (!canStart) return;
 
+        const durationSeconds = FOCUS_MODES[focusMode].workMinutes * 60;
+
+        if (sessionMode === 'guest') {
+            onStart({
+                sessionId: `guest-${crypto.randomUUID()}`,
+                taskId: selectedTask?.id,
+                projects: [],
+                task: sessionTask,
+                description: description.trim() || undefined,
+                focusMode,
+                durationSeconds,
+            });
+            return;
+        }
+
         setIsSubmitting(true);
 
         const result = await startSession(
@@ -73,7 +94,6 @@ export function SessionSetup({ projects, tasks, onStart }: SessionSetupProps) {
             const selectedProjects = projects
                 .filter((p) => selectedIds.includes(p.id))
                 .map((p) => ({ id: p.id, name: p.name, color: p.color }));
-            const durationSeconds = FOCUS_MODES[focusMode].workMinutes * 60;
             const activeSession = await createActiveSession({
                 taskId: selectedTask?.id ?? null,
                 phase: 'focus',
@@ -118,13 +138,13 @@ export function SessionSetup({ projects, tasks, onStart }: SessionSetupProps) {
                     label="Quick task"
                     placeholder="Or type what you're about to work on"
                     value={quickTask}
-                    onChange={(event) => setQuickTask(event.target.value)}
-                    maxLength={TASK_MAX_LENGTH}
-                    disabled={isSubmitting}
+                onChange={(event) => setQuickTask(event.target.value)}
+                maxLength={TASK_MAX_LENGTH}
+                disabled={isSubmitting}
                 />
                 {selectedTask ? (
                     <p className="text-sm text-[var(--text-secondary)]">
-                        Starting a synced focus block for{' '}
+                        Starting {sessionMode === 'guest' ? 'a local focus block for ' : 'a synced focus block for ' }
                         <span className="font-medium text-[var(--text-primary)]">
                             {selectedTask.title}
                         </span>
@@ -132,7 +152,7 @@ export function SessionSetup({ projects, tasks, onStart }: SessionSetupProps) {
                     </p>
                 ) : trimmedQuickTask ? (
                     <p className="text-sm text-[var(--text-secondary)]">
-                        Starting a synced focus block for{' '}
+                        Starting {sessionMode === 'guest' ? 'a local focus block for ' : 'a synced focus block for ' }
                         <span className="font-medium text-[var(--text-primary)]">
                             {trimmedQuickTask}
                         </span>

@@ -1,5 +1,6 @@
 import { signIn } from '@/lib/auth';
 import { Button } from '@/components/ui/button';
+import { GuestUpgradeBanner } from '@/components/auth/guest-upgrade-banner';
 import { Github } from 'lucide-react';
 
 async function signInWithGitHub() {
@@ -46,6 +47,8 @@ export default function SignInPage() {
                     Focus. Build. Ship.
                 </p>
             </div>
+
+            <GuestUpgradeBanner />
 
             <div className="flex flex-col gap-3">
                 <form action={signInWithGitHub}>

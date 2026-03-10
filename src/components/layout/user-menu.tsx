@@ -36,7 +36,7 @@ export function UserMenu() {
                 </span>
                 <button
                     type="button"
-                    onClick={() => signOut()}
+                    onClick={() => signOut({ callbackUrl: '/' })}
                     className="flex items-center gap-2 text-left text-sm text-[var(--text-secondary)] transition-colors hover:text-[var(--danger)]"
                 >
                     <LogOut className="h-4 w-4 shrink-0" />

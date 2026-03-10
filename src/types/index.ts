@@ -15,6 +15,7 @@ export interface StartTimerParams {
     readonly taskId?: string;
     readonly projects: ReadonlyArray<SessionProjectRef>;
     readonly task: string;
+    readonly description?: string;
     readonly focusMode: FocusMode;
     readonly durationSeconds: number;
     readonly activeSessionVersion?: number;
@@ -45,6 +46,7 @@ export interface ActiveTimer {
     readonly taskId?: string;
     readonly projects: ReadonlyArray<SessionProjectRef>;
     readonly task: string;
+    readonly description?: string;
     readonly focusMode: FocusMode;
     readonly startedAt: number;
     readonly durationSeconds: number;

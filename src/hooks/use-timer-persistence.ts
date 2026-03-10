@@ -66,6 +66,7 @@ function parseStoredTimer(stored: string): ActiveTimer | null {
     }
 
     const task = obj.task;
+    const description = obj.description;
     const focusMode = obj.focusMode;
     const startedAt = obj.startedAt;
     const durationSeconds = obj.durationSeconds;
@@ -75,6 +76,9 @@ function parseStoredTimer(stored: string): ActiveTimer | null {
 
     if (
         typeof task !== 'string' ||
+        (description !== undefined &&
+            description !== null &&
+            typeof description !== 'string') ||
         (focusMode !== 'short' && focusMode !== 'average' && focusMode !== 'deep') ||
         typeof startedAt !== 'number' ||
         typeof durationSeconds !== 'number' ||
@@ -90,6 +94,8 @@ function parseStoredTimer(stored: string): ActiveTimer | null {
         taskId: typeof taskId === 'string' ? taskId : undefined,
         projects,
         task,
+        description:
+            typeof description === 'string' ? description : undefined,
         focusMode,
         startedAt,
         durationSeconds,

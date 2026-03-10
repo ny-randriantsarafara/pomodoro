@@ -14,6 +14,8 @@ import {
     requestNotificationPermission,
     sendTimerCompleteNotification,
 } from '@/lib/notifications';
+import { DEFAULT_TIMER_SETTINGS } from '@/lib/settings';
+import { saveGuestWorkspace, loadGuestWorkspace } from '@/lib/guest-store';
 import type { ActiveTimer, StartTimerParams } from '@/types';
 
 type TimerPhase = 'idle' | 'focus' | 'break';
@@ -39,6 +41,11 @@ export interface UseTimerReturn {
     readonly stopTimer: () => Promise<void>;
 }
 
+interface UseTimerOptions {
+    readonly syncEnabled?: boolean;
+    readonly sessionMode?: 'signed-in' | 'guest';
+}
+
 const TICK_MS = 1000;
 const COMPLETION_PULSE_MS = 800;
 const REMOTE_UPDATE_PULSE_MS = 2400;
@@ -49,6 +56,7 @@ function createActiveTimer(params: StartTimerParams): ActiveTimer {
         taskId: params.taskId,
         projects: params.projects,
         task: params.task,
+        description: params.description,
         focusMode: params.focusMode,
         startedAt: Date.now(),
         durationSeconds: params.durationSeconds,
@@ -57,6 +65,48 @@ function createActiveTimer(params: StartTimerParams): ActiveTimer {
         totalPausedSeconds: 0,
         activeSessionVersion: params.activeSessionVersion,
     };
+}
+
+function persistGuestActiveTimer(timer: ActiveTimer | null) {
+    const current = loadGuestWorkspace();
+
+    saveGuestWorkspace({
+        tasks: current?.tasks ?? [],
+        sessions: current?.sessions ?? [],
+        settings: current?.settings ?? DEFAULT_TIMER_SETTINGS,
+        activeTimer: timer,
+        updatedAt: new Date().toISOString(),
+    });
+}
+
+function appendGuestSessionRecord(params: {
+    readonly timer: ActiveTimer;
+    readonly status: 'completed' | 'abandoned';
+    readonly elapsedSeconds: number;
+}) {
+    const current = loadGuestWorkspace();
+    const startedAt = new Date(params.timer.startedAt);
+    const completedAt = new Date(startedAt.getTime() + params.elapsedSeconds * 1000);
+
+    const nextSession = {
+        id: params.timer.sessionId,
+        taskId: params.timer.taskId ?? null,
+        task: params.timer.task,
+        description: params.timer.description ?? null,
+        focusMode: params.timer.focusMode,
+        startedAt: startedAt.toISOString(),
+        completedAt: completedAt.toISOString(),
+        durationSeconds: params.elapsedSeconds,
+        status: params.status,
+    } as const;
+
+    saveGuestWorkspace({
+        tasks: current?.tasks ?? [],
+        sessions: [...(current?.sessions ?? []), nextSession],
+        settings: current?.settings ?? DEFAULT_TIMER_SETTINGS,
+        activeTimer: null,
+        updatedAt: new Date().toISOString(),
+    });
 }
 
 function computeRemainingSeconds(
@@ -132,7 +182,11 @@ function restoreTimerState(): RestoredTimerState {
     };
 }
 
-export function useTimer(): UseTimerReturn {
+export function useTimer(options: UseTimerOptions = {}): UseTimerReturn {
+    const {
+        syncEnabled = true,
+        sessionMode = syncEnabled ? 'signed-in' : 'guest',
+    } = options;
     const [restored] = useState(() => restoreTimerState());
     const [activeTimer, setActiveTimer] = useState<ActiveTimer | null>(
         restored.activeTimer
@@ -158,7 +212,7 @@ export function useTimer(): UseTimerReturn {
         showRemoteUpdate,
         dismissRemoteUpdate,
         runAction,
-    } = useActiveSessionSync();
+    } = useActiveSessionSync({ enabled: syncEnabled });
 
     const clearIntervalSafe = useCallback(() => {
         if (intervalRef.current) {
@@ -171,13 +225,16 @@ export function useTimer(): UseTimerReturn {
         clearIntervalSafe();
         stopAlarm();
         clearTimer();
+        if (sessionMode === 'guest') {
+            persistGuestActiveTimer(null);
+        }
         setActiveTimer(null);
         setPhase('idle');
         setRemainingSeconds(0);
         setBreakDurationSeconds(0);
         setPhaseTiming(null);
         setIsPaused(false);
-    }, [clearIntervalSafe]);
+    }, [clearIntervalSafe, sessionMode]);
 
     const applySyncedSession = useCallback(
         (session: NonNullable<typeof syncedSession>) => {
@@ -234,6 +291,7 @@ export function useTimer(): UseTimerReturn {
         }
 
         if (
+            syncEnabled &&
             shouldResetToIdleOnMissingSyncedSession({
                 syncedSession,
                 isSyncLoading,
@@ -249,6 +307,7 @@ export function useTimer(): UseTimerReturn {
         isSyncLoading,
         phase,
         resetToIdle,
+        syncEnabled,
         syncedSession,
     ]);
 
@@ -291,37 +350,63 @@ export function useTimer(): UseTimerReturn {
     }, [phase]);
 
     useEffect(() => {
-        if (
-            !syncedSession ||
-            isPaused ||
-            remainingSeconds > 0 ||
-            transitionInFlightRef.current
-        ) {
+        if (isPaused || transitionInFlightRef.current) {
+            return;
+        }
+
+        if (!syncEnabled) {
+            if (phase !== 'focus' || !activeTimer || remainingSeconds > 0) {
+                return;
+            }
+
+            transitionInFlightRef.current = true;
+            setJustCompletedFocus(true);
+            playAlarm();
+            sendTimerCompleteNotification(activeTimer.task);
+            appendGuestSessionRecord({
+                timer: activeTimer,
+                status: 'completed',
+                elapsedSeconds: activeTimer.durationSeconds,
+            });
+            resetToIdle();
+            return;
+        }
+
+        if (!syncedSession || remainingSeconds > 0) {
             return;
         }
 
         transitionInFlightRef.current = true;
+        const currentSyncedSession = syncedSession;
 
         const handlePhaseCompletion = async () => {
-            if (syncedSession.phase === 'focus') {
+            if (!currentSyncedSession) {
+                transitionInFlightRef.current = false;
+                return;
+            }
+
+            if (currentSyncedSession.phase === 'focus') {
                 setJustCompletedFocus(true);
                 playAlarm();
                 sendTimerCompleteNotification(
-                    syncedSession.taskLabel ?? 'Focus session'
+                    currentSyncedSession.taskLabel ?? 'Focus session'
                 );
 
-                if (syncedSession.sessionId) {
-                    await completeSession(syncedSession.sessionId);
+                if (currentSyncedSession.sessionId) {
+                    await completeSession(currentSyncedSession.sessionId);
                 }
 
-                const result = await runAction('skip', syncedSession.version);
+                const result = await runAction(
+                    'skip',
+                    currentSyncedSession.version
+                );
                 if (!result.success || !result.data) {
                     transitionInFlightRef.current = false;
                 }
                 return;
             }
 
-            await runAction('stop', syncedSession.version);
+            await runAction('stop', currentSyncedSession.version);
             resetToIdle();
         };
 
@@ -331,6 +416,7 @@ export function useTimer(): UseTimerReturn {
         remainingSeconds,
         resetToIdle,
         runAction,
+        syncEnabled,
         syncedSession,
     ]);
 
@@ -345,7 +431,10 @@ export function useTimer(): UseTimerReturn {
         setPhaseTiming(buildPhaseTimingFromTimer(timer));
         setIsPaused(false);
         saveTimer(timer);
-    }, [clearIntervalSafe]);
+        if (sessionMode === 'guest') {
+            persistGuestActiveTimer(timer);
+        }
+    }, [clearIntervalSafe, sessionMode]);
 
     const pauseTimer = useCallback(async () => {
         if (phase === 'idle' || isPaused) return;
@@ -367,12 +456,15 @@ export function useTimer(): UseTimerReturn {
                 };
                 setActiveTimer(updatedTimer);
                 saveTimer(updatedTimer);
+                if (sessionMode === 'guest') {
+                    persistGuestActiveTimer(updatedTimer);
+                }
             }
             return;
         }
 
         await runAction('pause', syncedSession.version);
-    }, [activeTimer, isPaused, phase, phaseTiming, runAction, syncedSession]);
+    }, [activeTimer, isPaused, phase, phaseTiming, runAction, sessionMode, syncedSession]);
 
     const resumeTimer = useCallback(async () => {
         if (phase === 'idle' || !isPaused) return;
@@ -402,12 +494,15 @@ export function useTimer(): UseTimerReturn {
                 };
                 setActiveTimer(updatedTimer);
                 saveTimer(updatedTimer);
+                if (sessionMode === 'guest') {
+                    persistGuestActiveTimer(updatedTimer);
+                }
             }
             return;
         }
 
         await runAction('resume', syncedSession.version);
-    }, [activeTimer, isPaused, phase, phaseTiming, runAction, syncedSession]);
+    }, [activeTimer, isPaused, phase, phaseTiming, runAction, sessionMode, syncedSession]);
 
     const stopTimer = useCallback(async () => {
         clearIntervalSafe();
@@ -432,7 +527,16 @@ export function useTimer(): UseTimerReturn {
                 0,
                 activeTimer.durationSeconds - remainingSeconds
             );
-            await abandonSession(activeTimer.sessionId, elapsedSeconds);
+
+            if (sessionMode === 'guest') {
+                appendGuestSessionRecord({
+                    timer: activeTimer,
+                    status: 'abandoned',
+                    elapsedSeconds,
+                });
+            } else {
+                await abandonSession(activeTimer.sessionId, elapsedSeconds);
+            }
         }
 
         resetToIdle();
@@ -442,6 +546,7 @@ export function useTimer(): UseTimerReturn {
         remainingSeconds,
         resetToIdle,
         runAction,
+        sessionMode,
         syncedSession,
     ]);
 
