@@ -1,4 +1,6 @@
 import {
+    DAILY_GOAL_MINUTES_MAX,
+    DAILY_GOAL_MINUTES_MIN,
     TIMER_LONG_BREAK_FREQUENCY_MAX,
     TIMER_LONG_BREAK_FREQUENCY_MIN,
     TIMER_LONG_BREAK_MINUTES_MAX,
@@ -8,7 +10,7 @@ import {
     TIMER_WORK_MINUTES_MAX,
     TIMER_WORK_MINUTES_MIN,
 } from './constants';
-import type { TimerSettings } from '@/types';
+import type { AppSettings, TimerSettings } from '@/types';
 
 export const DEFAULT_TIMER_SETTINGS: TimerSettings = {
     workMinutes: 25,
@@ -17,6 +19,12 @@ export const DEFAULT_TIMER_SETTINGS: TimerSettings = {
     longBreakFrequency: 4,
     autoStartBreaks: false,
     autoStartFocusSessions: false,
+};
+
+export const DEFAULT_APP_SETTINGS: AppSettings = {
+    ...DEFAULT_TIMER_SETTINGS,
+    dailyGoalMinutes: 100,
+    analyticsOptIn: false,
 };
 
 function clampNumber(value: number, min: number, max: number): number {
@@ -52,5 +60,20 @@ export function clampTimerSettings(
         autoStartFocusSessions:
             input.autoStartFocusSessions ??
             DEFAULT_TIMER_SETTINGS.autoStartFocusSessions,
+    };
+}
+
+export function clampAppSettings(input: Partial<AppSettings>): AppSettings {
+    const timerSettings = clampTimerSettings(input);
+
+    return {
+        ...timerSettings,
+        dailyGoalMinutes: clampNumber(
+            input.dailyGoalMinutes ?? DEFAULT_APP_SETTINGS.dailyGoalMinutes,
+            DAILY_GOAL_MINUTES_MIN,
+            DAILY_GOAL_MINUTES_MAX
+        ),
+        analyticsOptIn:
+            input.analyticsOptIn ?? DEFAULT_APP_SETTINGS.analyticsOptIn,
     };
 }

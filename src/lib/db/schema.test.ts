@@ -110,6 +110,8 @@ describe('database schema', () => {
         expect(columns).toContain('longBreakFrequency');
         expect(columns).toContain('autoStartBreaks');
         expect(columns).toContain('autoStartFocusSessions');
+        expect(columns).toContain('dailyGoalMinutes');
+        expect(columns).toContain('analyticsOptIn');
         expect(columns).toContain('createdAt');
         expect(columns).toContain('updatedAt');
     });

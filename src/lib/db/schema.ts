@@ -194,6 +194,8 @@ export const userSettings = pgTable('user_settings', {
     autoStartFocusSessions: boolean('auto_start_focus_sessions')
         .notNull()
         .default(false),
+    dailyGoalMinutes: integer('daily_goal_minutes').notNull().default(100),
+    analyticsOptIn: boolean('analytics_opt_in').notNull().default(false),
     createdAt: timestamp('created_at', { mode: 'date' })
         .defaultNow()
         .notNull(),

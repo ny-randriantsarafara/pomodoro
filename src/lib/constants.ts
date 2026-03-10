@@ -21,5 +21,7 @@ export const TIMER_LONG_BREAK_MINUTES_MIN = 1;
 export const TIMER_LONG_BREAK_MINUTES_MAX = 90;
 export const TIMER_LONG_BREAK_FREQUENCY_MIN = 1;
 export const TIMER_LONG_BREAK_FREQUENCY_MAX = 12;
+export const DAILY_GOAL_MINUTES_MIN = 0;
+export const DAILY_GOAL_MINUTES_MAX = 720;
 
 export const TIMER_STORAGE_KEY = 'pomodoro-active-timer';

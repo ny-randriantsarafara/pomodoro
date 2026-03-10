@@ -35,6 +35,11 @@ export interface TimerSettings {
     readonly autoStartFocusSessions: boolean;
 }
 
+export interface AppSettings extends TimerSettings {
+    readonly dailyGoalMinutes: number;
+    readonly analyticsOptIn: boolean;
+}
+
 export interface ActiveTimer {
     readonly sessionId: string;
     readonly taskId?: string;
