@@ -26,19 +26,12 @@
     {
       "idx": 3,
       "version": "7",
-      "when": 1773063780000,
-      "tag": "0003_add_session_description",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
       "when": 1773179543051,
       "tag": "0004_rainy_marten_broadcloak",
       "breakpoints": true
     },
     {
-      "idx": 5,
+      "idx": 4,
       "version": "7",
       "when": 1773179819837,
       "tag": "0005_past_scarlet_witch",
