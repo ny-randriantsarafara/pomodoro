@@ -1,10 +1,9 @@
-'use server';
-
-import { db } from '@/lib/db';
-import { focusSessions, projects, sessionProjects } from '@/lib/db/schema';
-import { requireAuth } from '@/lib/auth-utils';
-import { eq, desc, inArray } from 'drizzle-orm';
-import type { StatsData, DailyFocusPoint, ProjectStats } from '@/types';
+import type {
+    StatsData,
+    DailyFocusPoint,
+    ProjectStats,
+    TaskStats,
+} from '@/types';
 import type { FocusMode } from '@/lib/db/schema';
 
 const DAY_NAMES = [
@@ -38,12 +37,81 @@ function startOfWeek(date: Date): Date {
     return d;
 }
 
+interface TaskLeaderboardInput {
+    readonly taskId: string | null;
+    readonly task: string;
+    readonly durationSeconds: number;
+}
+
+export function buildTaskLeaderboard(
+    sessions: ReadonlyArray<TaskLeaderboardInput>
+): ReadonlyArray<TaskStats> {
+    const map = new Map<
+        string,
+        { taskId: string; taskLabel: string; totalSeconds: number; sessionCount: number }
+    >();
+
+    for (const session of sessions) {
+        if (!session.taskId) {
+            continue;
+        }
+
+        const existing = map.get(session.taskId) ?? {
+            taskId: session.taskId,
+            taskLabel: session.task,
+            totalSeconds: 0,
+            sessionCount: 0,
+        };
+
+        existing.totalSeconds += session.durationSeconds;
+        existing.sessionCount += 1;
+        map.set(session.taskId, existing);
+    }
+
+    return Array.from(map.values()).sort(
+        (left, right) => right.totalSeconds - left.totalSeconds
+    );
+}
+
+async function loadDependencies() {
+    const [{ db }, schema, { requireAuth }, { desc, eq, inArray }] =
+        await Promise.all([
+            import('@/lib/db'),
+            import('@/lib/db/schema'),
+            import('@/lib/auth-utils'),
+            import('drizzle-orm'),
+        ]);
+
+    return {
+        db,
+        focusSessions: schema.focusSessions,
+        projects: schema.projects,
+        sessionProjects: schema.sessionProjects,
+        requireAuth,
+        desc,
+        eq,
+        inArray,
+    };
+}
+
 export async function getStats(): Promise<StatsData> {
+    const {
+        db,
+        focusSessions,
+        projects,
+        sessionProjects,
+        requireAuth,
+        desc,
+        eq,
+        inArray,
+    } = await loadDependencies();
     const user = await requireAuth();
 
     const allSessions = await db
         .select({
             id: focusSessions.id,
+            taskId: focusSessions.taskId,
+            task: focusSessions.task,
             focusMode: focusSessions.focusMode,
             startedAt: focusSessions.startedAt,
             completedAt: focusSessions.completedAt,
@@ -241,6 +309,8 @@ export async function getStats(): Promise<StatsData> {
         }))
         .sort((a, b) => b.totalSeconds - a.totalSeconds);
 
+    const taskStats = buildTaskLeaderboard(completed);
+
     // Average daily minutes (over days that had sessions)
     const activeDays = daysWithSessions.size;
     const averageDailyMinutes =
@@ -262,6 +332,7 @@ export async function getStats(): Promise<StatsData> {
         peakHour,
         dailyFocus,
         projectStats,
+        taskStats,
         averageDailyMinutes,
     };
 }

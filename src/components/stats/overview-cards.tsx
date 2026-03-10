@@ -15,6 +15,8 @@ interface OverviewCardsProps {
 }
 
 export function OverviewCards({ stats }: OverviewCardsProps) {
+    const topTask = stats.taskStats[0];
+
     return (
         <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
             <Card padding="md">
@@ -22,7 +24,7 @@ export function OverviewCards({ stats }: OverviewCardsProps) {
                     {formatDuration(stats.totalFocusSeconds)}
                 </p>
                 <p className="mt-1 text-sm text-[var(--text-secondary)]">
-                    all time
+                    {topTask ? `Top task: ${topTask.taskLabel}` : 'all time'}
                 </p>
             </Card>
             <Card padding="md">

@@ -5,6 +5,7 @@ import { FocusChart } from '@/components/stats/focus-chart';
 import { ModeBreakdown } from '@/components/stats/mode-breakdown';
 import { InsightsCards } from '@/components/stats/insights-cards';
 import { ProjectLeaderboard } from '@/components/stats/project-leaderboard';
+import { TaskLeaderboard } from '@/components/stats/task-leaderboard';
 
 export default async function StatsPage() {
     const stats = await getStats();
@@ -41,11 +42,20 @@ export default async function StatsPage() {
 
             <InsightsCards stats={stats} />
 
-            <div>
-                <h2 className="mb-4 text-lg font-semibold text-[var(--text-primary)]">
-                    Project Leaderboard
-                </h2>
-                <ProjectLeaderboard projectStats={stats.projectStats} />
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                <div>
+                    <h2 className="mb-4 text-lg font-semibold text-[var(--text-primary)]">
+                        Task Leaderboard
+                    </h2>
+                    <TaskLeaderboard taskStats={stats.taskStats} />
+                </div>
+
+                <div>
+                    <h2 className="mb-4 text-lg font-semibold text-[var(--text-primary)]">
+                        Project Leaderboard
+                    </h2>
+                    <ProjectLeaderboard projectStats={stats.projectStats} />
+                </div>
             </div>
         </div>
     );

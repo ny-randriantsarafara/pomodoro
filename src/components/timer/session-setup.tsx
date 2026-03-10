@@ -65,7 +65,8 @@ export function SessionSetup({ projects, tasks, onStart }: SessionSetupProps) {
             selectedIds,
             sessionTask,
             focusMode,
-            description.trim() || undefined
+            description.trim() || undefined,
+            selectedTask?.id
         );
 
         if (result.success) {

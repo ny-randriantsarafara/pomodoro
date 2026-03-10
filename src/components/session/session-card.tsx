@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useState, useRef, useEffect } from 'react';
 import { MoreVertical } from 'lucide-react';
 import { Card } from '@/components/ui/card';
@@ -28,6 +29,13 @@ function formatTimeStarted(date: Date): string {
         hour: 'numeric',
         minute: '2-digit',
     }).format(date);
+}
+
+function formatDateParam(date: Date): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
 }
 
 const FOCUS_MODE_BADGE_VARIANT: Record<
@@ -124,9 +132,18 @@ export function SessionCard({ session }: SessionCardProps) {
                         </div>
                     </div>
 
-                    <p className="text-sm font-medium text-[var(--text-primary)]">
-                        {session.task}
-                    </p>
+                    {session.taskId ? (
+                        <Link
+                            href={`/log?date=${formatDateParam(session.startedAt)}&taskId=${session.taskId}`}
+                            className="text-sm font-medium text-[var(--text-primary)] hover:underline"
+                        >
+                            {session.task}
+                        </Link>
+                    ) : (
+                        <p className="text-sm font-medium text-[var(--text-primary)]">
+                            {session.task}
+                        </p>
+                    )}
                     {session.description && (
                         <p className="text-xs text-[var(--text-secondary)]">
                             {session.description}

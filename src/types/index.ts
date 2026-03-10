@@ -78,6 +78,7 @@ export interface DailyLogSummary {
 
 export interface SessionWithProjects {
     readonly id: string;
+    readonly taskId: string | null;
     readonly projects: ReadonlyArray<SessionProjectRef>;
     readonly focusMode: FocusMode;
     readonly task: string;
@@ -116,6 +117,13 @@ export interface ProjectStats {
     readonly lastSessionDate: Date | null;
 }
 
+export interface TaskStats {
+    readonly taskId: string;
+    readonly taskLabel: string;
+    readonly totalSeconds: number;
+    readonly sessionCount: number;
+}
+
 export interface StatsData {
     readonly totalFocusSeconds: number;
     readonly totalSessions: number;
@@ -135,5 +143,6 @@ export interface StatsData {
     readonly peakHour: number | null;
     readonly dailyFocus: ReadonlyArray<DailyFocusPoint>;
     readonly projectStats: ReadonlyArray<ProjectStats>;
+    readonly taskStats: ReadonlyArray<TaskStats>;
     readonly averageDailyMinutes: number;
 }

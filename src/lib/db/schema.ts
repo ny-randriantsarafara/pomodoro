@@ -150,6 +150,9 @@ export const focusSessions = pgTable('focus_sessions', {
     userId: uuid('user_id')
         .notNull()
         .references(() => users.id, { onDelete: 'cascade' }),
+    taskId: uuid('task_id').references(() => tasks.id, {
+        onDelete: 'set null',
+    }),
     focusMode: focusModeEnum('focus_mode').notNull(),
     task: text('task').notNull(),
     description: text('description'),

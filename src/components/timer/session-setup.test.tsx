@@ -111,6 +111,7 @@ describe('SessionSetup', () => {
                 [],
                 'Ship onboarding polish',
                 'short',
+                undefined,
                 undefined
             );
         });
@@ -183,7 +184,8 @@ describe('SessionSetup', () => {
                 [],
                 'Write release notes',
                 'short',
-                undefined
+                undefined,
+                'task-1'
             );
         });
 

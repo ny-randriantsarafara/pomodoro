@@ -20,18 +20,23 @@ function parseDateParam(value: string | undefined): Date {
 }
 
 interface LogPageProps {
-    readonly searchParams: Promise<{ date?: string }>;
+    readonly searchParams: Promise<{ date?: string; taskId?: string }>;
 }
 
 export default async function LogPage({ searchParams }: LogPageProps) {
     const params = await searchParams;
     const date = parseDateParam(params.date);
+    const taskId = params.taskId;
 
     const [sessions, summary, projects] = await Promise.all([
-        getSessionsByDate(date),
-        getDailyLogSummary(date),
+        getSessionsByDate(date, taskId),
+        getDailyLogSummary(date, taskId),
         getProjects(),
     ]);
+    const activeTaskLabel =
+        taskId !== undefined
+            ? sessions.find((session) => session.taskId === taskId)?.task ?? null
+            : null;
 
     return (
         <div className="mx-auto max-w-4xl flex flex-col gap-6 p-6 lg:p-10">
@@ -40,7 +45,10 @@ export default async function LogPage({ searchParams }: LogPageProps) {
             </h1>
             <LogHeader currentDate={date} projects={projects} />
             <DailySummary summary={summary} />
-            <SessionList sessions={sessions} />
+            <SessionList
+                sessions={sessions}
+                activeTaskLabel={activeTaskLabel}
+            />
         </div>
     );
 }

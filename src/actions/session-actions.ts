@@ -1,7 +1,12 @@
 'use server';
 
 import { db } from '@/lib/db';
-import { focusSessions, projects, sessionProjects } from '@/lib/db/schema';
+import {
+    focusSessions,
+    projects,
+    sessionProjects,
+    tasks,
+} from '@/lib/db/schema';
 import { requireAuth } from '@/lib/auth-utils';
 import { validateTask } from '@/lib/validators';
 import { FOCUS_MODES } from '@/lib/constants';
@@ -18,7 +23,8 @@ export async function startSession(
     projectIds: ReadonlyArray<string>,
     task: string,
     focusMode: FocusMode,
-    description?: string
+    description?: string,
+    taskId?: string | null
 ): Promise<ActionResult<FocusSession>> {
     const user = await requireAuth();
 
@@ -29,6 +35,18 @@ export async function startSession(
 
     if (!(focusMode in FOCUS_MODES)) {
         return { success: false, error: 'Invalid focus mode' };
+    }
+
+    if (taskId) {
+        const [ownedTask] = await db
+            .select({ id: tasks.id })
+            .from(tasks)
+            .where(and(eq(tasks.id, taskId), eq(tasks.userId, user.id)))
+            .limit(1);
+
+        if (!ownedTask) {
+            return { success: false, error: 'Task not found' };
+        }
     }
 
     const [activeSession] = await db
@@ -54,6 +72,7 @@ export async function startSession(
         .insert(focusSessions)
         .values({
             userId: user.id,
+            taskId: taskId ?? null,
             focusMode,
             task: task.trim(),
             description: description?.trim() || null,
@@ -140,7 +159,8 @@ export async function abandonSession(
 }
 
 export async function getSessionsByDate(
-    date: Date
+    date: Date,
+    taskId?: string
 ): Promise<ReadonlyArray<SessionWithProjects>> {
     const user = await requireAuth();
 
@@ -153,6 +173,7 @@ export async function getSessionsByDate(
     const sessionRows = await db
         .select({
             id: focusSessions.id,
+            taskId: focusSessions.taskId,
             focusMode: focusSessions.focusMode,
             task: focusSessions.task,
             description: focusSessions.description,
@@ -165,6 +186,7 @@ export async function getSessionsByDate(
         .where(
             and(
                 eq(focusSessions.userId, user.id),
+                taskId ? eq(focusSessions.taskId, taskId) : undefined,
                 gte(focusSessions.startedAt, startOfDay),
                 lt(focusSessions.startedAt, endOfDay)
             )
@@ -208,8 +230,11 @@ export async function getSessionsByDate(
     }));
 }
 
-export async function getDailyLogSummary(date: Date): Promise<DailyLogSummary> {
-    const sessions = await getSessionsByDate(date);
+export async function getDailyLogSummary(
+    date: Date,
+    taskId?: string
+): Promise<DailyLogSummary> {
+    const sessions = await getSessionsByDate(date, taskId);
 
     const completedSessions = sessions.filter((s) => s.status === 'completed');
 
@@ -238,6 +263,7 @@ export async function getSessionsByProject(
     const sessionRows = await db
         .select({
             id: focusSessions.id,
+            taskId: focusSessions.taskId,
             focusMode: focusSessions.focusMode,
             task: focusSessions.task,
             description: focusSessions.description,

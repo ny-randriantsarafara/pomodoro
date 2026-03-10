@@ -25,7 +25,8 @@ export function ProjectLeaderboard({ projectStats }: ProjectLeaderboardProps) {
         return (
             <Card padding="lg">
                 <p className="text-center text-[var(--text-secondary)]">
-                    No sessions yet. Start focusing to see your project stats!
+                    No tagged sessions yet. Add projects to your focus blocks to
+                    see project stats here.
                 </p>
             </Card>
         );
