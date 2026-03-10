@@ -8,6 +8,8 @@
 
 **Tech Stack:** Next.js 16 App Router, React 19, TypeScript, Drizzle ORM, PostgreSQL, Auth.js, Vitest, Playwright.
 
+**Execution status as of 2026-03-11:** Tasks 1 through 10 are implemented on `main`. The final release gate for Task 11 is full verification plus documentation updates that reflect the shipped scope: task-first timer flow, optional project association, signed-in active-session sync, and a narrow local-only guest timer entry point from the public landing page.
+
 ---
 
 ## Implementation Notes
@@ -758,6 +760,8 @@ git commit -m "feat: make history and stats task-aware"
 
 ### Task 10: Add Guest Onboarding, Auth Upgrade, And Cross-Device E2E Coverage
 
+**Chosen scope:** expose guest mode only through the public landing page and a local-only `/guest/timer` flow. Keep the authenticated app shell protected. Cover the guest path and the signed-in timer boundary with E2E tests.
+
 **Files:**
 - Modify: `src/app/page.tsx`
 - Modify: `src/app/(auth)/sign-in/page.tsx`
@@ -813,7 +817,7 @@ export function GuestUpgradeBanner({ hasGuestData }: { hasGuestData: boolean }) 
 
 Run: `npx playwright test e2e/guest-mode.spec.ts e2e/timer-sync.spec.ts`
 
-Expected: PASS for guest local flow and signed-in cross-device visibility/control.
+Expected: PASS for guest local flow and the signed-in timer boundary, while signed-in shared active-session behavior remains covered by the application-level active-session flow.
 
 **Step 5: Commit**
 

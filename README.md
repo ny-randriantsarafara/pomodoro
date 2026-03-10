@@ -2,7 +2,7 @@
 
 Focus. Build. Ship.
 
-A multi-user Pomodoro timer with tiered focus modes, project-based session tracking, GitHub integration for project discovery, and a daily session log for standup reference.
+A task-first Pomodoro timer with guest mode, signed-in session sync, optional project association, GitHub project import, and a daily focus log.
 
 ## Features
 
@@ -10,8 +10,12 @@ A multi-user Pomodoro timer with tiered focus modes, project-based session track
     - Short Focus: 25 min work / 5 min break
     - Average Focus: 50 min work / 10 min break
     - Deep Focus: 90 min work / 20 min break
-- **Project-based tracking** -- every session is tied to a project with a required task description
+- **Task-first tracking** -- start a session quickly, attach it to a task, and optionally add projects for organization
+- **Guest mode** -- open `/guest/timer` from the landing page and use the timer locally without creating an account
+- **Signed-in active session sync** -- a running signed-in session can be restored and controlled from another signed-in browser
+- **Configurable timer settings** -- adjust work, short break, long break, long-break frequency, daily goal, and analytics preferences
 - **Daily Log** -- sessions grouped by date with summary stats, for standup reference
+- **Task-aware stats** -- review history, streaks, and top tasks over time
 - **GitHub Integration** -- connect multiple GitHub accounts via OAuth, import repos as projects
 - **Multi-user** -- proper authentication, each user's data fully isolated
 - **Timer resilience** -- state persisted in localStorage, survives refreshes and tab closes
@@ -144,13 +148,14 @@ npm run db:migrate
 npm run dev
 ```
 
-The app runs at [http://localhost:3000](http://localhost:3000). You'll be redirected to the sign-in page where you can authenticate with GitHub.
+The app runs at [http://localhost:3000](http://localhost:3000). The landing page lets you continue in local guest mode or sign in with GitHub for synced sessions.
 
 ### Verifying the setup
 
 - **Database:** Run `npm run db:studio` to open Drizzle Studio and inspect your tables
 - **Auth:** Visit `http://localhost:3000/sign-in` and click "Sign in with GitHub"
-- **Timer:** After signing in, you'll land on `/timer` -- create a project first, then start a session
+- **Guest mode:** Visit `http://localhost:3000/guest/timer` or use the landing page CTA to start a local-only session
+- **Timer:** Signed-in users can go to `/timer`, start against a task or without one, and see the active session from another signed-in browser
 
 ---
 
@@ -176,33 +181,42 @@ The app runs at [http://localhost:3000](http://localhost:3000). You'll be redire
 src/
 ├── app/
 │   ├── layout.tsx                     # root layout, dark theme, auth provider
-│   ├── page.tsx                       # redirects to /timer or /sign-in
+│   ├── page.tsx                       # public landing page with guest and sign-in entry points
+│   ├── guest/timer/page.tsx           # local-only guest timer
 │   ├── (auth)/
 │   │   └── sign-in/page.tsx           # sign-in page (GitHub OAuth)
 │   ├── (app)/                         # authenticated routes
 │   │   ├── layout.tsx                 # sidebar + active session banner
 │   │   ├── timer/page.tsx             # main timer view
+│   │   ├── tasks/page.tsx             # task management
 │   │   ├── log/page.tsx               # daily session log
+│   │   ├── stats/page.tsx             # task-aware focus analytics
 │   │   ├── projects/
 │   │   │   ├── page.tsx               # project list
 │   │   │   └── [id]/page.tsx          # project detail + session history
-│   │   └── settings/page.tsx          # GitHub connections
+│   │   └── settings/page.tsx          # timer, goal, analytics, and connection settings
 │   └── api/
 │       ├── auth/[...nextauth]/        # Auth.js route handler
 │       └── github/callback/           # GitHub connections OAuth callback
 ├── actions/                           # server actions
+│   ├── active-session-actions.ts
+│   ├── task-actions.ts
 │   ├── project-actions.ts
 │   ├── session-actions.ts
+│   ├── settings-actions.ts
+│   ├── stats-actions.ts
 │   └── github-actions.ts
 ├── components/
 │   ├── ui/                            # button, input, select, card, badge, dialog
 │   ├── timer/                         # timer ring, display, controls, mode selector
+│   ├── task/                          # task list, form, and quick actions
 │   ├── session/                       # session card, list, daily summary
 │   ├── project/                       # project card, form, list
-│   ├── settings/                      # GitHub connections list
+│   ├── settings/                      # settings forms
 │   ├── layout/                        # sidebar, user menu
 │   └── providers/                     # auth session provider
 ├── hooks/
+│   ├── use-active-session-sync.ts     # signed-in active session polling and actions
 │   ├── use-timer.ts                   # timer state management
 │   └── use-timer-persistence.ts       # localStorage persistence
 ├── lib/
@@ -211,8 +225,10 @@ src/
 │   │   └── index.ts                   # database connection
 │   ├── auth.ts                        # Auth.js configuration
 │   ├── auth-utils.ts                  # requireAuth() helper
+│   ├── guest-import.ts                # guest-to-account import payload helpers
+│   ├── guest-store.ts                 # guest workspace persistence
 │   ├── github.ts                      # GitHub API client
-│   ├── constants.ts                   # focus modes, validation limits
+│   ├── settings.ts                    # shared timer settings defaults and clamps
 │   ├── validators.ts                  # input validation functions
 │   └── utils.ts                       # cn() class merge utility
 └── types/

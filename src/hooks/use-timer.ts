@@ -1,11 +1,10 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useReducer, useRef } from 'react';
 import { abandonSession, completeSession } from '@/actions/session-actions';
 import { clearTimer, loadTimer, saveTimer } from './use-timer-persistence';
 import {
     buildActiveTimerFromSession,
-    getSyncedRemainingSeconds,
     useActiveSessionSync,
 } from './use-active-session-sync';
 import { shouldResetToIdleOnMissingSyncedSession } from './use-timer-sync-guards';
@@ -17,15 +16,14 @@ import {
 import { DEFAULT_TIMER_SETTINGS } from '@/lib/settings';
 import { saveGuestWorkspace, loadGuestWorkspace } from '@/lib/guest-store';
 import type { ActiveTimer, StartTimerParams } from '@/types';
-
-type TimerPhase = 'idle' | 'focus' | 'break';
-
-interface PhaseTiming {
-    readonly startedAt: number;
-    readonly durationSeconds: number;
-    readonly pausedAt: number | null;
-    readonly totalPausedSeconds: number;
-}
+import {
+    buildPhaseTimingFromTimer,
+    computeRemainingSeconds,
+    createIdleTimerState,
+    reduceTimerState,
+    type TimerPhase,
+    type TimerState,
+} from './timer-state';
 
 export interface UseTimerReturn {
     readonly activeTimer: ActiveTimer | null;
@@ -109,49 +107,11 @@ function appendGuestSessionRecord(params: {
     });
 }
 
-function computeRemainingSeconds(
-    timing: PhaseTiming,
-    isPaused: boolean,
-    nowMs: number = Date.now()
-): number {
-    const anchorMs =
-        isPaused && timing.pausedAt !== null ? timing.pausedAt : nowMs;
-    const elapsedSeconds =
-        (anchorMs - timing.startedAt) / 1000 - timing.totalPausedSeconds;
-
-    return Math.max(0, Math.ceil(timing.durationSeconds - elapsedSeconds));
-}
-
-function buildPhaseTimingFromTimer(timer: ActiveTimer): PhaseTiming {
-    return {
-        startedAt: timer.startedAt,
-        durationSeconds: timer.durationSeconds,
-        pausedAt: timer.pausedAt,
-        totalPausedSeconds: timer.totalPausedSeconds,
-    };
-}
-
-interface RestoredTimerState {
-    readonly activeTimer: ActiveTimer | null;
-    readonly phase: TimerPhase;
-    readonly remainingSeconds: number;
-    readonly breakDurationSeconds: number;
-    readonly isPaused: boolean;
-    readonly phaseTiming: PhaseTiming | null;
-}
-
-function restoreTimerState(): RestoredTimerState {
+function restoreTimerState(): TimerState {
     const stored = loadTimer();
 
     if (!stored) {
-        return {
-            activeTimer: null,
-            phase: 'idle',
-            remainingSeconds: 0,
-            breakDurationSeconds: 0,
-            isPaused: false,
-            phaseTiming: null,
-        };
+        return createIdleTimerState();
     }
 
     const phaseTiming = buildPhaseTimingFromTimer(stored);
@@ -162,14 +122,7 @@ function restoreTimerState(): RestoredTimerState {
 
     if (remainingSeconds <= 0) {
         clearTimer();
-        return {
-            activeTimer: null,
-            phase: 'idle',
-            remainingSeconds: 0,
-            breakDurationSeconds: 0,
-            isPaused: false,
-            phaseTiming: null,
-        };
+        return createIdleTimerState();
     }
 
     return {
@@ -179,6 +132,7 @@ function restoreTimerState(): RestoredTimerState {
         breakDurationSeconds: 0,
         isPaused: stored.isPaused,
         phaseTiming,
+        justCompletedFocus: false,
     };
 }
 
@@ -187,24 +141,22 @@ export function useTimer(options: UseTimerOptions = {}): UseTimerReturn {
         syncEnabled = true,
         sessionMode = syncEnabled ? 'signed-in' : 'guest',
     } = options;
-    const [restored] = useState(() => restoreTimerState());
-    const [activeTimer, setActiveTimer] = useState<ActiveTimer | null>(
-        restored.activeTimer
+    const [timerState, dispatch] = useReducer(
+        reduceTimerState,
+        undefined,
+        restoreTimerState
     );
-    const [phase, setPhase] = useState<TimerPhase>(restored.phase);
-    const [remainingSeconds, setRemainingSeconds] = useState(
-        restored.remainingSeconds
-    );
-    const [breakDurationSeconds, setBreakDurationSeconds] = useState(
-        restored.breakDurationSeconds
-    );
-    const [phaseTiming, setPhaseTiming] = useState<PhaseTiming | null>(
-        restored.phaseTiming
-    );
-    const [isPaused, setIsPaused] = useState(restored.isPaused);
-    const [justCompletedFocus, setJustCompletedFocus] = useState(false);
     const transitionInFlightRef = useRef(false);
     const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    const {
+        activeTimer,
+        phase,
+        remainingSeconds,
+        breakDurationSeconds,
+        phaseTiming,
+        isPaused,
+        justCompletedFocus,
+    } = timerState;
 
     const {
         session: syncedSession,
@@ -221,52 +173,15 @@ export function useTimer(options: UseTimerOptions = {}): UseTimerReturn {
         }
     }, []);
 
-    const resetToIdle = useCallback(() => {
+    const resetToIdle = useCallback((preserveCompletionPulse = false) => {
         clearIntervalSafe();
         stopAlarm();
         clearTimer();
         if (sessionMode === 'guest') {
             persistGuestActiveTimer(null);
         }
-        setActiveTimer(null);
-        setPhase('idle');
-        setRemainingSeconds(0);
-        setBreakDurationSeconds(0);
-        setPhaseTiming(null);
-        setIsPaused(false);
+        dispatch({ type: 'reset', preserveCompletionPulse });
     }, [clearIntervalSafe, sessionMode]);
-
-    const applySyncedSession = useCallback(
-        (session: NonNullable<typeof syncedSession>) => {
-            transitionInFlightRef.current = false;
-
-            if (session.phase === 'focus' && session.sessionId) {
-                const nextTimer = buildActiveTimerFromSession(session);
-                setActiveTimer(nextTimer);
-                setPhase('focus');
-                setRemainingSeconds(getSyncedRemainingSeconds(session));
-                setBreakDurationSeconds(0);
-                setPhaseTiming(buildPhaseTimingFromTimer(nextTimer));
-                setIsPaused(session.isPaused);
-                saveTimer(nextTimer);
-                return;
-            }
-
-            clearTimer();
-            setActiveTimer(null);
-            setPhase('break');
-            setRemainingSeconds(getSyncedRemainingSeconds(session));
-            setBreakDurationSeconds(session.phaseDurationSeconds);
-            setPhaseTiming({
-                startedAt: session.phaseStartedAt.getTime(),
-                durationSeconds: session.phaseDurationSeconds,
-                pausedAt: session.pausedAt?.getTime() ?? null,
-                totalPausedSeconds: session.totalPausedSeconds,
-            });
-            setIsPaused(session.isPaused);
-        },
-        []
-    );
 
     useEffect(() => {
         void requestNotificationPermission();
@@ -286,7 +201,13 @@ export function useTimer(options: UseTimerOptions = {}): UseTimerReturn {
 
     useEffect(() => {
         if (syncedSession) {
-            applySyncedSession(syncedSession);
+            transitionInFlightRef.current = false;
+            dispatch({ type: 'apply-synced-session', session: syncedSession });
+            if (syncedSession.phase === 'focus' && syncedSession.sessionId) {
+                saveTimer(buildActiveTimerFromSession(syncedSession));
+            } else {
+                clearTimer();
+            }
             return;
         }
 
@@ -303,7 +224,6 @@ export function useTimer(options: UseTimerOptions = {}): UseTimerReturn {
         }
     }, [
         activeTimer?.activeSessionVersion,
-        applySyncedSession,
         isSyncLoading,
         phase,
         resetToIdle,
@@ -315,7 +235,7 @@ export function useTimer(options: UseTimerOptions = {}): UseTimerReturn {
         if (!justCompletedFocus) return;
 
         const timeoutId = window.setTimeout(() => {
-            setJustCompletedFocus(false);
+            dispatch({ type: 'clear-completed-focus' });
         }, COMPLETION_PULSE_MS);
 
         return () => {
@@ -328,9 +248,10 @@ export function useTimer(options: UseTimerOptions = {}): UseTimerReturn {
 
         clearIntervalSafe();
         intervalRef.current = setInterval(() => {
-            setRemainingSeconds(
-                computeRemainingSeconds(phaseTiming, false)
-            );
+            dispatch({
+                type: 'tick',
+                remainingSeconds: computeRemainingSeconds(phaseTiming, false),
+            });
         }, TICK_MS);
 
         return clearIntervalSafe;
@@ -360,7 +281,7 @@ export function useTimer(options: UseTimerOptions = {}): UseTimerReturn {
             }
 
             transitionInFlightRef.current = true;
-            setJustCompletedFocus(true);
+            dispatch({ type: 'pulse-completed-focus' });
             playAlarm();
             sendTimerCompleteNotification(activeTimer.task);
             appendGuestSessionRecord({
@@ -368,7 +289,7 @@ export function useTimer(options: UseTimerOptions = {}): UseTimerReturn {
                 status: 'completed',
                 elapsedSeconds: activeTimer.durationSeconds,
             });
-            resetToIdle();
+            resetToIdle(true);
             return;
         }
 
@@ -386,7 +307,7 @@ export function useTimer(options: UseTimerOptions = {}): UseTimerReturn {
             }
 
             if (currentSyncedSession.phase === 'focus') {
-                setJustCompletedFocus(true);
+                dispatch({ type: 'pulse-completed-focus' });
                 playAlarm();
                 sendTimerCompleteNotification(
                     currentSyncedSession.taskLabel ?? 'Focus session'
@@ -412,7 +333,9 @@ export function useTimer(options: UseTimerOptions = {}): UseTimerReturn {
 
         void handlePhaseCompletion();
     }, [
+        activeTimer,
         isPaused,
+        phase,
         remainingSeconds,
         resetToIdle,
         runAction,
@@ -424,12 +347,7 @@ export function useTimer(options: UseTimerOptions = {}): UseTimerReturn {
         const timer = createActiveTimer(params);
         transitionInFlightRef.current = false;
         clearIntervalSafe();
-        setActiveTimer(timer);
-        setPhase('focus');
-        setRemainingSeconds(params.durationSeconds);
-        setBreakDurationSeconds(0);
-        setPhaseTiming(buildPhaseTimingFromTimer(timer));
-        setIsPaused(false);
+        dispatch({ type: 'start', timer });
         saveTimer(timer);
         if (sessionMode === 'guest') {
             persistGuestActiveTimer(timer);
@@ -442,19 +360,20 @@ export function useTimer(options: UseTimerOptions = {}): UseTimerReturn {
         if (!syncedSession) {
             if (!phaseTiming) return;
             const pausedAt = Date.now();
-            setIsPaused(true);
-            setPhaseTiming({
-                ...phaseTiming,
-                pausedAt,
-            });
-
             if (activeTimer) {
                 const updatedTimer = {
                     ...activeTimer,
                     isPaused: true,
                     pausedAt,
                 };
-                setActiveTimer(updatedTimer);
+                dispatch({
+                    type: 'pause-local',
+                    timer: updatedTimer,
+                    timing: {
+                        ...phaseTiming,
+                        pausedAt,
+                    },
+                });
                 saveTimer(updatedTimer);
                 if (sessionMode === 'guest') {
                     persistGuestActiveTimer(updatedTimer);
@@ -482,9 +401,6 @@ export function useTimer(options: UseTimerOptions = {}): UseTimerReturn {
                     phaseTiming.totalPausedSeconds + pauseDurationSeconds,
             };
 
-            setIsPaused(false);
-            setPhaseTiming(nextTiming);
-
             if (activeTimer) {
                 const updatedTimer = {
                     ...activeTimer,
@@ -492,7 +408,11 @@ export function useTimer(options: UseTimerOptions = {}): UseTimerReturn {
                     pausedAt: null,
                     totalPausedSeconds: nextTiming.totalPausedSeconds,
                 };
-                setActiveTimer(updatedTimer);
+                dispatch({
+                    type: 'resume-local',
+                    timer: updatedTimer,
+                    timing: nextTiming,
+                });
                 saveTimer(updatedTimer);
                 if (sessionMode === 'guest') {
                     persistGuestActiveTimer(updatedTimer);

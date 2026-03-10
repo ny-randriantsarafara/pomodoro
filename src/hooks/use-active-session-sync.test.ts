@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
     buildActiveTimerFromSession,
     deriveBannerState,
+    getSyncLoadingState,
 } from './use-active-session-sync';
 
 describe('use-active-session-sync helpers', () => {
@@ -51,5 +52,14 @@ describe('use-active-session-sync helpers', () => {
                 currentVersion: 4,
             }).showRemoteUpdate
         ).toBe(true);
+    });
+
+    it('reports sync loading as false whenever sync is disabled', () => {
+        expect(
+            getSyncLoadingState({
+                enabled: false,
+                isLoading: true,
+            })
+        ).toBe(false);
     });
 });

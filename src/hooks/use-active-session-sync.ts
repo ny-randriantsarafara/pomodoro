@@ -42,6 +42,13 @@ function getPhaseTimestampMs(value: Date | string): number {
     return value instanceof Date ? value.getTime() : new Date(value).getTime();
 }
 
+export function getSyncLoadingState(input: {
+    readonly enabled: boolean;
+    readonly isLoading: boolean;
+}) {
+    return input.enabled ? input.isLoading : false;
+}
+
 export function deriveBannerState(input: DeriveBannerStateInput) {
     return {
         showRemoteUpdate:
@@ -181,23 +188,25 @@ export function useActiveSessionSync(
 
     useEffect(() => {
         if (!enabled) {
-            setIsLoading(false);
             return;
         }
 
-        void refresh();
+        const initialRefreshId = window.setTimeout(() => {
+            void refresh();
+        }, 0);
         const intervalId = window.setInterval(() => {
             void refresh();
         }, pollIntervalMs);
 
         return () => {
+            window.clearTimeout(initialRefreshId);
             window.clearInterval(intervalId);
         };
     }, [enabled, pollIntervalMs, refresh]);
 
     return {
         session,
-        isLoading,
+        isLoading: getSyncLoadingState({ enabled, isLoading }),
         error,
         showRemoteUpdate,
         refresh,

@@ -1,34 +1,32 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useMemo } from 'react';
 import {
     buildGuestImportPayload,
     hasGuestWorkspaceData,
 } from '@/lib/guest-import';
+import type { GuestWorkspace } from '@/lib/guest-store';
 import { loadGuestWorkspace } from '@/lib/guest-store';
 
+export function getGuestUpgradeSummary(workspace: GuestWorkspace | null) {
+    if (!workspace || !hasGuestWorkspaceData(workspace)) {
+        return null;
+    }
+
+    const payload = buildGuestImportPayload(workspace);
+    return {
+        sessions: payload.counts.sessions,
+        tasks: payload.counts.tasks,
+        hasActiveTimer: payload.counts.hasActiveTimer,
+    };
+}
+
 export function GuestUpgradeBanner() {
-    const [summary, setSummary] = useState<{
-        sessions: number;
-        tasks: number;
-        hasActiveTimer: boolean;
-    } | null>(null);
-
-    useEffect(() => {
-        const workspace = loadGuestWorkspace();
-        if (!hasGuestWorkspaceData(workspace)) {
-            setSummary(null);
-            return;
-        }
-
-        const payload = buildGuestImportPayload(workspace!);
-        setSummary({
-            sessions: payload.counts.sessions,
-            tasks: payload.counts.tasks,
-            hasActiveTimer: payload.counts.hasActiveTimer,
-        });
-    }, []);
+    const summary = useMemo(
+        () => getGuestUpgradeSummary(loadGuestWorkspace()),
+        []
+    );
 
     if (!summary) {
         return null;

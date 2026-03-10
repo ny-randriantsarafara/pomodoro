@@ -182,6 +182,13 @@ The app already has a strong log and stats foundation. These surfaces should be 
 
 Guest mode should be available immediately on first use. The UI must make it clear that guest data is stored locally and does not sync across devices. When the user signs in, the app should offer import of local guest data into the account.
 
+For the current shipped web slice, guest mode is intentionally narrow:
+
+- the public landing page offers guest mode and sign-in as parallel entry points
+- guest mode exposes a local-only timer flow on `/guest/timer`
+- authenticated routes remain protected
+- sign-in can surface a guest-data upgrade banner, but full import execution remains a follow-up step
+
 ---
 
 ## 7. Data Model Evolution
