@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { PlusSquare } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { Dialog } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { TaskCard } from './task-card';
@@ -14,6 +15,7 @@ interface TaskListProps {
 
 export function TaskList({ tasks }: TaskListProps) {
     const [isCreateOpen, setIsCreateOpen] = useState(false);
+    const router = useRouter();
 
     const sections = useMemo(
         () => ({
@@ -65,7 +67,12 @@ export function TaskList({ tasks }: TaskListProps) {
                 onClose={() => setIsCreateOpen(false)}
                 title="New Task"
             >
-                <TaskForm onSuccess={() => setIsCreateOpen(false)} />
+                <TaskForm
+                    onSuccess={() => {
+                        setIsCreateOpen(false);
+                        router.refresh();
+                    }}
+                />
             </Dialog>
         </div>
     );

@@ -1,8 +1,8 @@
 'use server';
 
-import { DEFAULT_TIMER_SETTINGS, type TimerSettings } from '@/lib/settings';
+import { DEFAULT_TIMER_SETTINGS } from '@/lib/settings';
 import { transitionToNextPhase } from '@/lib/active-session-machine';
-import type { ActionResult } from '@/types';
+import type { ActionResult, TimerSettings } from '@/types';
 import type { ActiveSessionPhase } from '@/lib/db/schema';
 
 export type ActiveSessionAction = 'pause' | 'resume' | 'skip' | 'stop';
@@ -354,6 +354,13 @@ export async function applyActiveSessionAction(params: {
         return {
             success: true,
             data: null,
+        };
+    }
+
+    if (!update.data) {
+        return {
+            success: false,
+            error: ACTIVE_SESSION_VERSION_ERROR,
         };
     }
 

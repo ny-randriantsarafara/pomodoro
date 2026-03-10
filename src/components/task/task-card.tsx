@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { Check, Archive, Pencil } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { Card, CardFooter, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -14,15 +15,23 @@ interface TaskCardProps {
     readonly task: Task;
 }
 
-function formatDueDate(date: Date | null): string | null {
+const dueDateFormatter = new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    timeZone: 'UTC',
+});
+
+export function formatDueDate(date: Date | null): string | null {
     if (!date) return null;
-    return date.toLocaleDateString();
+    return dueDateFormatter.format(date);
 }
 
 export function TaskCard({ task }: TaskCardProps) {
     const [isEditOpen, setIsEditOpen] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [isPending, startTransition] = useTransition();
+    const router = useRouter();
 
     function handleStatusUpdate(action: 'complete' | 'archive') {
         setError(null);
@@ -30,7 +39,10 @@ export function TaskCard({ task }: TaskCardProps) {
             const result = await updateTaskStatus(task.id, action);
             if (!result.success) {
                 setError(result.error);
+                return;
             }
+
+            router.refresh();
         });
     }
 
@@ -118,7 +130,10 @@ export function TaskCard({ task }: TaskCardProps) {
             >
                 <TaskForm
                     initialData={task}
-                    onSuccess={() => setIsEditOpen(false)}
+                    onSuccess={() => {
+                        setIsEditOpen(false);
+                        router.refresh();
+                    }}
                 />
             </Dialog>
         </Card>

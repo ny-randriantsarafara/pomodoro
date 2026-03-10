@@ -13,9 +13,14 @@ interface TaskFormProps {
     readonly onSuccess?: () => void;
 }
 
-function formatDateInput(value: Date | null): string {
+export function formatDateInput(value: Date | null): string {
     if (!value) return '';
-    return value.toISOString().slice(0, 10);
+
+    const year = value.getUTCFullYear();
+    const month = String(value.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(value.getUTCDate()).padStart(2, '0');
+
+    return `${year}-${month}-${day}`;
 }
 
 export function TaskForm({ initialData, onSuccess }: TaskFormProps) {
