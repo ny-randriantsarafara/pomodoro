@@ -43,6 +43,8 @@ function parseStoredTimer(stored: string): ActiveTimer | null {
 
     const sessionId = obj.sessionId;
     if (typeof sessionId !== 'string') return null;
+    const taskId = obj.taskId;
+    const activeSessionVersion = obj.activeSessionVersion;
 
     let projects: ReadonlyArray<{ id: string; name: string; color: string }>;
     if (Array.isArray(obj.projects) && obj.projects.every(isValidProjectRef)) {
@@ -85,6 +87,7 @@ function parseStoredTimer(stored: string): ActiveTimer | null {
 
     return {
         sessionId,
+        taskId: typeof taskId === 'string' ? taskId : undefined,
         projects,
         task,
         focusMode,
@@ -93,6 +96,10 @@ function parseStoredTimer(stored: string): ActiveTimer | null {
         isPaused,
         pausedAt,
         totalPausedSeconds,
+        activeSessionVersion:
+            typeof activeSessionVersion === 'number'
+                ? activeSessionVersion
+                : undefined,
     };
 }
 

@@ -9,24 +9,27 @@ import { TimerDisplay } from '@/components/timer/timer-display';
 import { TimerControls } from '@/components/timer/timer-controls';
 import { SessionSetup } from '@/components/timer/session-setup';
 import { PipTimer } from '@/components/timer/pip-timer';
-import type { Project } from '@/lib/db/schema';
+import type { Project, Task } from '@/lib/db/schema';
 import { formatTime } from '@/lib/format-time';
 
 export interface TimerViewProps {
     readonly projects: ReadonlyArray<Project>;
+    readonly tasks: ReadonlyArray<Task>;
 }
 
-export function TimerView({ projects }: TimerViewProps) {
+export function TimerView({ projects, tasks }: TimerViewProps) {
     const {
         activeTimer,
         remainingSeconds,
         phase,
         progress,
+        isPaused,
+        showRemoteUpdate,
         justCompletedFocus,
         startTimer,
         pauseTimer,
         resumeTimer,
-        abandonTimer,
+        stopTimer,
     } = useTimer();
 
     const { isSupported, pipWindow, openPiP, closePiP } = usePiP();
@@ -52,6 +55,7 @@ export function TimerView({ projects }: TimerViewProps) {
                         <div className="relative z-10 w-full max-w-sm">
                             <SessionSetup
                                 projects={projects}
+                                tasks={tasks}
                                 onStart={startTimer}
                             />
                         </div>
@@ -97,13 +101,19 @@ export function TimerView({ projects }: TimerViewProps) {
                 )}
             </div>
 
-            {phase === 'focus' && activeTimer && (
+            {phase !== 'idle' && (
                 <TimerControls
-                    isPaused={activeTimer.isPaused}
+                    isPaused={isPaused}
                     onPause={pauseTimer}
                     onResume={resumeTimer}
-                    onAbandon={abandonTimer}
+                    onStop={stopTimer}
                 />
+            )}
+
+            {showRemoteUpdate && (
+                <p className="text-sm text-[var(--text-secondary)]">
+                    Timer updated from another device.
+                </p>
             )}
 
             {/* PiP toggle — only when focus session active and browser supports it */}
@@ -133,7 +143,7 @@ export function TimerView({ projects }: TimerViewProps) {
                     activeTimer={activeTimer}
                     onPause={pauseTimer}
                     onResume={resumeTimer}
-                    onAbandon={abandonTimer}
+                    onAbandon={stopTimer}
                 />
             )}
         </div>

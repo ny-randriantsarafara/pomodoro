@@ -1,191 +1,34 @@
 'use server';
 
 import { DEFAULT_TIMER_SETTINGS } from '@/lib/settings';
-import { transitionToNextPhase } from '@/lib/active-session-machine';
-import type { ActionResult, TimerSettings } from '@/types';
+import {
+    ACTIVE_SESSION_ALREADY_EXISTS_ERROR,
+    ACTIVE_SESSION_NOT_FOUND_ERROR,
+    ACTIVE_SESSION_VERSION_ERROR,
+    buildActiveSessionActionUpdate,
+    buildActiveSessionSnapshot,
+    getPhaseDurationSeconds,
+} from '@/lib/active-session-utils';
+import type {
+    ActiveSessionAction,
+    ActiveSessionRecord,
+} from '@/lib/active-session-utils';
+import type { ActionResult, ActiveSessionSnapshot, TimerSettings } from '@/types';
 import type { ActiveSessionPhase } from '@/lib/db/schema';
 
-export type ActiveSessionAction = 'pause' | 'resume' | 'skip' | 'stop';
-type ActiveSessionRecord = {
-    readonly userId?: string;
-    readonly taskId?: string | null;
-    readonly phase: ActiveSessionPhase;
-    readonly phaseStartedAt: Date;
-    readonly phaseDurationSeconds: number;
-    readonly completedFocusSessions: number;
-    readonly isPaused: boolean;
-    readonly pausedAt: Date | null;
-    readonly totalPausedSeconds: number;
-    readonly version: number;
-};
-
-type ActiveSessionMutation = {
-    readonly phase?: ActiveSessionPhase;
-    readonly phaseStartedAt?: Date;
-    readonly phaseDurationSeconds?: number;
-    readonly completedFocusSessions?: number;
-    readonly isPaused?: boolean;
-    readonly pausedAt?: Date | null;
-    readonly totalPausedSeconds?: number;
-    readonly version: number;
-    readonly updatedAt: Date;
-};
-
-interface VersionedRecord {
-    readonly version: number;
-}
-
-interface NormalizePhaseActionInput {
-    readonly currentPhase: ActiveSessionPhase;
-    readonly action: ActiveSessionAction;
-}
-
-interface NormalizePhaseActionResult {
-    readonly nextPhase: ActiveSessionPhase;
-}
-
-interface BuildActiveSessionActionUpdateInput {
-    readonly session: ActiveSessionRecord;
-    readonly action: ActiveSessionAction;
-    readonly expectedVersion: number;
-    readonly now: Date;
-    readonly settings: TimerSettings;
-}
-
-type BuildActiveSessionActionUpdateResult =
-    | { readonly success: false; readonly error: string }
-    | {
-          readonly success: true;
-          readonly data: ActiveSessionMutation | null;
-          readonly deleteActiveSession?: boolean;
-      };
-
-export const ACTIVE_SESSION_VERSION_ERROR =
-    'Active session is out of date. Refresh and try again.';
-export const ACTIVE_SESSION_NOT_FOUND_ERROR = 'Active session not found.';
-export const ACTIVE_SESSION_ALREADY_EXISTS_ERROR =
-    'You already have an active session.';
-
-export function buildVersionedUpdate<T extends VersionedRecord>(record: T) {
-    return {
-        version: record.version + 1,
-        updatedAt: new Date(),
-    };
-}
-
-export function normalizePhaseAction(
-    input: NormalizePhaseActionInput
-): NormalizePhaseActionResult {
-    if (input.action === 'skip') {
-        if (input.currentPhase === 'focus') {
-            return { nextPhase: 'shortBreak' };
-        }
-
-        return { nextPhase: 'focus' };
-    }
-
-    return {
-        nextPhase: input.currentPhase,
-    };
-}
-
-function getPhaseDurationSeconds(
-    phase: ActiveSessionPhase,
-    settings: TimerSettings
-): number {
-    switch (phase) {
-        case 'focus':
-            return settings.workMinutes * 60;
-        case 'shortBreak':
-            return settings.shortBreakMinutes * 60;
-        case 'longBreak':
-            return settings.longBreakMinutes * 60;
-    }
-}
-
-function getResumePausedSeconds(session: ActiveSessionRecord, now: Date): number {
-    if (!session.pausedAt) {
-        return session.totalPausedSeconds;
-    }
-
-    const pausedSeconds = Math.max(
-        0,
-        Math.round((now.getTime() - session.pausedAt.getTime()) / 1000)
-    );
-
-    return session.totalPausedSeconds + pausedSeconds;
-}
-
-export function buildActiveSessionActionUpdate(
-    input: BuildActiveSessionActionUpdateInput
-): BuildActiveSessionActionUpdateResult {
-    if (input.expectedVersion !== input.session.version) {
-        return {
-            success: false,
-            error: ACTIVE_SESSION_VERSION_ERROR,
-        };
-    }
-
-    if (input.action === 'stop') {
-        return {
-            success: true,
-            data: null,
-            deleteActiveSession: true,
-        };
-    }
-
-    if (input.action === 'pause') {
-        return {
-            success: true,
-            data: {
-                ...buildVersionedUpdate(input.session),
-                isPaused: true,
-                pausedAt: input.now,
-            },
-        };
-    }
-
-    if (input.action === 'resume') {
-        return {
-            success: true,
-            data: {
-                ...buildVersionedUpdate(input.session),
-                isPaused: false,
-                pausedAt: null,
-                totalPausedSeconds: getResumePausedSeconds(
-                    input.session,
-                    input.now
-                ),
-            },
-        };
-    }
-
-    const transition = transitionToNextPhase({
-        currentPhase: input.session.phase,
-        completedFocusCount: input.session.completedFocusSessions,
-        longBreakFrequency: input.settings.longBreakFrequency,
-        shortBreakSeconds: getPhaseDurationSeconds('shortBreak', input.settings),
-        longBreakSeconds: getPhaseDurationSeconds('longBreak', input.settings),
-        nextFocusSeconds: getPhaseDurationSeconds('focus', input.settings),
-    });
-
-    return {
-        success: true,
-        data: {
-            ...buildVersionedUpdate(input.session),
-            phase: transition.nextPhase,
-            phaseStartedAt: input.now,
-            phaseDurationSeconds: transition.nextDurationSeconds,
-            completedFocusSessions: transition.completedFocusCount,
-            isPaused: false,
-            pausedAt: null,
-            totalPausedSeconds: 0,
-        },
-    };
+interface ActiveSessionMetadata {
+    readonly sessionId: string | null;
+    readonly taskLabel: string | null;
 }
 
 async function loadDependencies() {
-    const [{ requireAuth }, { db }, schema, { and, eq }, { revalidatePath }] =
+    const [
+        { requireAuth },
+        { db },
+        schema,
+        { and, desc, eq, isNull },
+        { revalidatePath },
+    ] =
         await Promise.all([
             import('@/lib/auth-utils'),
             import('@/lib/db'),
@@ -198,9 +41,13 @@ async function loadDependencies() {
         requireAuth,
         db,
         activeSessions: schema.activeSessions,
+        focusSessions: schema.focusSessions,
+        tasks: schema.tasks,
         userSettings: schema.userSettings,
         and,
+        desc,
         eq,
+        isNull,
         revalidatePath,
     };
 }
@@ -226,7 +73,71 @@ async function getTimerSettingsForUser(userId: string): Promise<TimerSettings> {
     };
 }
 
-export async function getActiveSession(): Promise<ActionResult<ActiveSessionRecord | null>> {
+async function getActiveSessionMetadata(
+    userId: string,
+    taskId: string | null | undefined
+): Promise<ActiveSessionMetadata> {
+    const { db, focusSessions, tasks, and, desc, eq, isNull } =
+        await loadDependencies();
+
+    const [focusSession] = await db
+        .select({
+            id: focusSessions.id,
+            task: focusSessions.task,
+        })
+        .from(focusSessions)
+        .where(
+            and(
+                eq(focusSessions.userId, userId),
+                isNull(focusSessions.completedAt)
+            )
+        )
+        .orderBy(desc(focusSessions.startedAt))
+        .limit(1);
+
+    if (focusSession) {
+        return {
+            sessionId: focusSession.id,
+            taskLabel: focusSession.task,
+        };
+    }
+
+    if (!taskId) {
+        return {
+            sessionId: null,
+            taskLabel: null,
+        };
+    }
+
+    const [task] = await db
+        .select({
+            title: tasks.title,
+        })
+        .from(tasks)
+        .where(and(eq(tasks.id, taskId), eq(tasks.userId, userId)))
+        .limit(1);
+
+    return {
+        sessionId: null,
+        taskLabel: task?.title ?? null,
+    };
+}
+
+async function hydrateActiveSessionSnapshot(
+    userId: string,
+    session: ActiveSessionRecord | null
+): Promise<ActiveSessionSnapshot | null> {
+    if (!session) {
+        return null;
+    }
+
+    const metadata = await getActiveSessionMetadata(userId, session.taskId);
+    return buildActiveSessionSnapshot(session, metadata);
+}
+
+export async function getActiveSession(): Promise<
+    ActionResult<ActiveSessionSnapshot | null>
+> {
     const { requireAuth, db, activeSessions, eq } = await loadDependencies();
     const user = await requireAuth();
     const [session] = await db
@@ -236,7 +147,7 @@ export async function getActiveSession(): Promise<ActionResult<ActiveSessionReco
 
     return {
         success: true,
-        data: session ?? null,
+        data: await hydrateActiveSessionSnapshot(user.id, session ?? null),
     };
 }
 
@@ -246,7 +157,7 @@ export async function createActiveSession(params: {
     readonly phaseStartedAt?: Date;
     readonly phaseDurationSeconds?: number;
     readonly completedFocusSessions?: number;
-}): Promise<ActionResult<ActiveSessionRecord>> {
+}): Promise<ActionResult<ActiveSessionSnapshot>> {
     const { requireAuth, db, activeSessions, eq, revalidatePath } =
         await loadDependencies();
     const user = await requireAuth();
@@ -288,7 +199,7 @@ export async function createActiveSession(params: {
     revalidatePath('/timer');
     return {
         success: true,
-        data: session,
+        data: (await hydrateActiveSessionSnapshot(user.id, session))!,
     };
 }
 
@@ -296,7 +207,7 @@ export async function applyActiveSessionAction(params: {
     readonly action: ActiveSessionAction;
     readonly expectedVersion: number;
     readonly now?: Date;
-}): Promise<ActionResult<ActiveSessionRecord | null>> {
+}): Promise<ActionResult<ActiveSessionSnapshot | null>> {
     const {
         requireAuth,
         db,
@@ -385,6 +296,6 @@ export async function applyActiveSessionAction(params: {
     revalidatePath('/timer');
     return {
         success: true,
-        data: updated,
+        data: await hydrateActiveSessionSnapshot(user.id, updated),
     };
 }

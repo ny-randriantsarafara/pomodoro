@@ -1,4 +1,8 @@
-import type { FocusMode, SessionStatus } from '@/lib/db/schema';
+import type {
+    ActiveSessionPhase,
+    FocusMode,
+    SessionStatus,
+} from '@/lib/db/schema';
 
 export interface SessionProjectRef {
     readonly id: string;
@@ -8,10 +12,12 @@ export interface SessionProjectRef {
 
 export interface StartTimerParams {
     readonly sessionId: string;
+    readonly taskId?: string;
     readonly projects: ReadonlyArray<SessionProjectRef>;
     readonly task: string;
     readonly focusMode: FocusMode;
     readonly durationSeconds: number;
+    readonly activeSessionVersion?: number;
 }
 
 export interface TimerConfig {
@@ -31,6 +37,7 @@ export interface TimerSettings {
 
 export interface ActiveTimer {
     readonly sessionId: string;
+    readonly taskId?: string;
     readonly projects: ReadonlyArray<SessionProjectRef>;
     readonly task: string;
     readonly focusMode: FocusMode;
@@ -39,6 +46,21 @@ export interface ActiveTimer {
     readonly isPaused: boolean;
     readonly pausedAt: number | null;
     readonly totalPausedSeconds: number;
+    readonly activeSessionVersion?: number;
+}
+
+export interface ActiveSessionSnapshot {
+    readonly taskId: string | null;
+    readonly sessionId: string | null;
+    readonly taskLabel: string | null;
+    readonly phase: ActiveSessionPhase;
+    readonly phaseStartedAt: Date;
+    readonly phaseDurationSeconds: number;
+    readonly completedFocusSessions: number;
+    readonly isPaused: boolean;
+    readonly pausedAt: Date | null;
+    readonly totalPausedSeconds: number;
+    readonly version: number;
 }
 
 export interface DailyLogSummary {

@@ -9,8 +9,8 @@ export interface PipTimerProps {
     readonly pipWindow: Window;
     readonly remainingSeconds: number;
     readonly activeTimer: ActiveTimer;
-    readonly onPause: () => void;
-    readonly onResume: () => void;
+    readonly onPause: () => void | Promise<void>;
+    readonly onResume: () => void | Promise<void>;
     readonly onAbandon: () => Promise<void>;
 }
 

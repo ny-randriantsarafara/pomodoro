@@ -2,24 +2,26 @@
 
 import { useState, useCallback, useMemo } from 'react';
 import { X, Search } from 'lucide-react';
-import { startSession } from '@/actions/session-actions';
-import { FOCUS_MODES, TASK_MAX_LENGTH } from '@/lib/constants';
+import { abandonSession, startSession } from '@/actions/session-actions';
+import { createActiveSession } from '@/actions/active-session-actions';
+import { FOCUS_MODES } from '@/lib/constants';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { ModeSelector } from './mode-selector';
+import { TaskPicker } from './task-picker';
 import { cn } from '@/lib/utils';
-import type { Project } from '@/lib/db/schema';
+import type { Project, Task } from '@/lib/db/schema';
 import type { FocusMode } from '@/lib/db/schema';
 import type { StartTimerParams } from '@/types';
 
 export interface SessionSetupProps {
     readonly projects: ReadonlyArray<Project>;
+    readonly tasks: ReadonlyArray<Task>;
     readonly onStart: (params: StartTimerParams) => void;
 }
 
-export function SessionSetup({ projects, onStart }: SessionSetupProps) {
+export function SessionSetup({ projects, tasks, onStart }: SessionSetupProps) {
     const [selectedIds, setSelectedIds] = useState<ReadonlyArray<string>>([]);
-    const [task, setTask] = useState('');
+    const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
     const [description, setDescription] = useState('');
     const [focusMode, setFocusMode] = useState<FocusMode>('short');
     const [error, setError] = useState<string | null>(null);
@@ -36,8 +38,10 @@ export function SessionSetup({ projects, onStart }: SessionSetupProps) {
         );
     }, [projects, projectSearch, selectedIds]);
 
-    const canStart =
-        selectedIds.length > 0 && task.trim() !== '' && !isSubmitting;
+    const selectedTask =
+        tasks.find((task) => task.id === selectedTaskId) ?? null;
+
+    const canStart = selectedTask !== null && !isSubmitting;
 
     const toggleProject = useCallback((id: string) => {
         setSelectedIds((prev) =>
@@ -51,29 +55,41 @@ export function SessionSetup({ projects, onStart }: SessionSetupProps) {
         setError(null);
         if (!canStart) return;
 
-        const trimmedTask = task.trim();
         setIsSubmitting(true);
 
-        const result = await startSession(selectedIds, trimmedTask, focusMode, description.trim() || undefined);
+        const result = await startSession(
+            selectedIds,
+            selectedTask.title,
+            focusMode,
+            description.trim() || undefined
+        );
 
         if (result.success) {
             const selectedProjects = projects
                 .filter((p) => selectedIds.includes(p.id))
                 .map((p) => ({ id: p.id, name: p.name, color: p.color }));
+            const durationSeconds = FOCUS_MODES[focusMode].workMinutes * 60;
+            const activeSession = await createActiveSession({
+                taskId: selectedTask.id,
+                phase: 'focus',
+                phaseDurationSeconds: durationSeconds,
+            });
 
-            if (selectedProjects.length === 0) {
-                setError('Selected projects not found');
+            if (!activeSession.success) {
+                await abandonSession(result.data.id, 0);
+                setError(activeSession.error);
                 setIsSubmitting(false);
                 return;
             }
 
-            const durationSeconds = FOCUS_MODES[focusMode].workMinutes * 60;
             onStart({
                 sessionId: result.data.id,
+                taskId: selectedTask.id,
                 projects: selectedProjects,
-                task: trimmedTask,
+                task: selectedTask.title,
                 focusMode,
                 durationSeconds,
+                activeSessionVersion: activeSession.data.version,
             });
         } else {
             setError(result.error);
@@ -85,7 +101,31 @@ export function SessionSetup({ projects, onStart }: SessionSetupProps) {
         <div className="flex flex-col gap-6">
             <div className="flex flex-col gap-2">
                 <label className="text-sm font-medium text-[var(--text-primary)]">
-                    Projects
+                    Task
+                </label>
+                <TaskPicker
+                    tasks={tasks}
+                    selectedTaskId={selectedTaskId}
+                    onSelect={(task) => setSelectedTaskId(task.id)}
+                    disabled={isSubmitting}
+                />
+                {selectedTask ? (
+                    <p className="text-sm text-[var(--text-secondary)]">
+                        Starting a synced focus block for{' '}
+                        <span className="font-medium text-[var(--text-primary)]">
+                            {selectedTask.title}
+                        </span>
+                        .
+                    </p>
+                ) : null}
+            </div>
+
+            <div className="flex flex-col gap-2">
+                <label className="text-sm font-medium text-[var(--text-primary)]">
+                    Projects{' '}
+                    <span className="font-normal text-[var(--text-secondary)]">
+                        (optional)
+                    </span>
                 </label>
                 {projects.length > 6 && (
                     <div className="relative">
@@ -137,20 +177,10 @@ export function SessionSetup({ projects, onStart }: SessionSetupProps) {
                 )}
                 {projects.length === 0 && (
                     <p className="text-sm text-[var(--text-secondary)]">
-                        No projects yet. Create one first.
+                        No projects yet. You can still start a task-only session.
                     </p>
                 )}
             </div>
-
-            <Input
-                label="Task"
-                placeholder="What are you working on?"
-                value={task}
-                onChange={(e) => setTask(e.target.value)}
-                maxLength={TASK_MAX_LENGTH}
-                disabled={isSubmitting}
-                required
-            />
 
             <div className="flex flex-col gap-2">
                 <label className="text-sm font-medium text-[var(--text-primary)]">

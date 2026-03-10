@@ -1,60 +1,79 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { loadTimer } from '@/hooks/use-timer-persistence';
+import {
+    getSyncedRemainingSeconds,
+    useActiveSessionSync,
+} from '@/hooks/use-active-session-sync';
 import { cn } from '@/lib/utils';
+import type { SessionProjectRef } from '@/types';
 
 function formatRemainingTime(seconds: number): string {
-    const m = Math.floor(seconds / 60);
-    const s = Math.floor(seconds % 60);
-    return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    const minutes = Math.floor(seconds / 60);
+    const secondsPart = Math.floor(seconds % 60);
+    return `${String(minutes).padStart(2, '0')}:${String(secondsPart).padStart(2, '0')}`;
 }
 
-function computeRemainingSeconds(
-    startedAt: number,
-    durationSeconds: number,
-    isPaused: boolean,
-    pausedAt: number | null,
-    totalPausedSeconds: number
-): number {
-    const now = Date.now();
-    const elapsedSec =
-        isPaused && pausedAt !== null
-            ? (pausedAt - startedAt) / 1000 - totalPausedSeconds
-            : (now - startedAt) / 1000 - totalPausedSeconds;
-    return Math.max(0, Math.ceil(durationSeconds - elapsedSec));
+function computeLocalRemainingSeconds() {
+    const timer = loadTimer();
+    if (!timer) {
+        return { timer: null, remainingSeconds: 0 };
+    }
+
+    const anchorMs =
+        timer.isPaused && timer.pausedAt !== null ? timer.pausedAt : Date.now();
+    const elapsedSeconds =
+        (anchorMs - timer.startedAt) / 1000 - timer.totalPausedSeconds;
+
+    return {
+        timer,
+        remainingSeconds: Math.max(
+            0,
+            Math.ceil(timer.durationSeconds - elapsedSeconds)
+        ),
+    };
 }
 
 export function ActiveSessionBanner() {
     const pathname = usePathname();
-    const [timer, setTimer] = useState<ReturnType<typeof loadTimer>>(null);
-    const [remainingSeconds, setRemainingSeconds] = useState(0);
+    const { session } = useActiveSessionSync();
+    const [localRemainingSeconds, setLocalRemainingSeconds] = useState(0);
+    const [localTask, setLocalTask] = useState<string | null>(null);
+    const [localProjects, setLocalProjects] = useState<
+        ReadonlyArray<SessionProjectRef>
+    >([]);
 
     useEffect(() => {
         const tick = () => {
-            const stored = loadTimer();
-            setTimer(stored);
-            if (!stored) return;
-            const remaining = computeRemainingSeconds(
-                stored.startedAt,
-                stored.durationSeconds,
-                stored.isPaused,
-                stored.pausedAt,
-                stored.totalPausedSeconds
-            );
-            setRemainingSeconds(remaining);
+            const local = computeLocalRemainingSeconds();
+            setLocalRemainingSeconds(local.remainingSeconds);
+            setLocalTask(local.timer?.task ?? null);
+            setLocalProjects(local.timer?.projects ?? []);
         };
 
         tick();
-        const interval = setInterval(tick, 1000);
-        return () => clearInterval(interval);
+        const intervalId = window.setInterval(tick, 1000);
+        return () => {
+            window.clearInterval(intervalId);
+        };
     }, []);
 
-    if (pathname === '/timer' || !timer) return null;
+    if (pathname === '/timer') {
+        return null;
+    }
 
-    const task = timer.task.trim() !== '' ? timer.task : 'Untitled task';
+    const remainingSeconds = session
+        ? getSyncedRemainingSeconds(session)
+        : localRemainingSeconds;
+    const taskLabel =
+        session?.taskLabel?.trim() || localTask?.trim() || 'Active session';
+
+    if (!session && !localTask) {
+        return null;
+    }
 
     return (
         <Link
@@ -66,18 +85,20 @@ export function ActiveSessionBanner() {
             )}
             style={{ borderBottomWidth: 1, borderBottomColor: 'var(--accent)' }}
         >
-            <span className="flex shrink-0 items-center gap-1">
-                {timer.projects.map((p) => (
-                    <span
-                        key={p.id}
-                        className="h-2 w-2 shrink-0 rounded-full"
-                        style={{ backgroundColor: p.color }}
-                        aria-hidden
-                    />
-                ))}
-            </span>
+            {!session ? (
+                <span className="flex shrink-0 items-center gap-1">
+                    {localProjects.map((project) => (
+                        <span
+                            key={project.id}
+                            className="h-2 w-2 shrink-0 rounded-full"
+                            style={{ backgroundColor: project.color }}
+                            aria-hidden
+                        />
+                    ))}
+                </span>
+            ) : null}
             <span className="truncate font-medium text-[var(--text-primary)]">
-                {task}
+                {taskLabel}
             </span>
             <span>—</span>
             <span

@@ -8,9 +8,9 @@ import { cn } from '@/lib/utils';
 
 export interface TimerControlsProps {
     readonly isPaused: boolean;
-    readonly onPause: () => void;
-    readonly onResume: () => void;
-    readonly onAbandon: () => void;
+    readonly onPause: () => void | Promise<void>;
+    readonly onResume: () => void | Promise<void>;
+    readonly onStop: () => void | Promise<void>;
     readonly className?: string;
 }
 
@@ -18,16 +18,16 @@ export function TimerControls({
     isPaused,
     onPause,
     onResume,
-    onAbandon,
+    onStop,
     className,
 }: TimerControlsProps) {
     const [showConfirm, setShowConfirm] = useState(false);
 
-    const handleAbandonClick = () => setShowConfirm(true);
+    const handleStopClick = () => setShowConfirm(true);
     const handleConfirmClose = () => setShowConfirm(false);
 
-    const handleAbandonConfirm = async () => {
-        await onAbandon();
+    const handleStopConfirm = async () => {
+        await onStop();
         setShowConfirm(false);
     };
 
@@ -50,8 +50,8 @@ export function TimerControls({
             <Button
                 variant="danger"
                 size="lg"
-                onClick={handleAbandonClick}
-                aria-label="Abandon session"
+                onClick={handleStopClick}
+                aria-label="Stop timer"
             >
                 <X className="h-5 w-5" aria-hidden />
             </Button>
@@ -59,12 +59,12 @@ export function TimerControls({
             <Dialog
                 open={showConfirm}
                 onClose={handleConfirmClose}
-                title="Abandon session?"
+                title="Stop timer?"
             >
                 <div className="flex flex-col gap-4">
                     <p className="text-[var(--text-secondary)]">
-                        Your progress will not be saved. Are you sure you want
-                        to abandon this session?
+                        The current timer will end immediately. Are you sure you
+                        want to stop it?
                     </p>
                     <div className="flex justify-end gap-2">
                         <Button
@@ -73,8 +73,8 @@ export function TimerControls({
                         >
                             Cancel
                         </Button>
-                        <Button variant="danger" onClick={handleAbandonConfirm}>
-                            Abandon
+                        <Button variant="danger" onClick={handleStopConfirm}>
+                            Stop
                         </Button>
                     </div>
                 </div>

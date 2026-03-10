@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
     ACTIVE_SESSION_VERSION_ERROR,
+    buildActiveSessionSnapshot,
     buildActiveSessionActionUpdate,
     buildVersionedUpdate,
     normalizePhaseAction,
-} from './active-session-actions';
+} from '@/lib/active-session-utils';
 import { DEFAULT_TIMER_SETTINGS } from '@/lib/settings';
 
 describe('active session action helpers', () => {
@@ -163,6 +164,33 @@ describe('active session action helpers', () => {
             success: true,
             data: null,
             deleteActiveSession: true,
+        });
+    });
+
+    it('adds task and session metadata for cross-device rendering', () => {
+        expect(
+            buildActiveSessionSnapshot(
+                {
+                    taskId: 'task-1',
+                    phase: 'focus',
+                    phaseStartedAt: new Date('2026-03-10T10:00:00.000Z'),
+                    phaseDurationSeconds: 1500,
+                    completedFocusSessions: 0,
+                    isPaused: false,
+                    pausedAt: null,
+                    totalPausedSeconds: 0,
+                    version: 2,
+                },
+                {
+                    sessionId: 'session-1',
+                    taskLabel: 'Write release notes',
+                }
+            )
+        ).toMatchObject({
+            taskId: 'task-1',
+            sessionId: 'session-1',
+            taskLabel: 'Write release notes',
+            version: 2,
         });
     });
 });
