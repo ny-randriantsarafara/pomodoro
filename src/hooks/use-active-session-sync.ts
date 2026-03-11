@@ -91,7 +91,6 @@ export function buildActiveTimerFromSession(
             ? getPhaseTimestampMs(session.pausedAt)
             : null,
         totalPausedSeconds: session.totalPausedSeconds,
-        activeSessionVersion: session.version,
     };
 }
 

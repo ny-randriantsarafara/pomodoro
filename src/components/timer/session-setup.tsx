@@ -2,8 +2,7 @@
 
 import { useState, useCallback, useMemo } from 'react';
 import { X, Search } from 'lucide-react';
-import { abandonSession, startSession } from '@/actions/session-actions';
-import { createActiveSession } from '@/actions/active-session-actions';
+import { startSession } from '@/actions/session-actions';
 import { FOCUS_MODES, TASK_MAX_LENGTH } from '@/lib/constants';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -94,27 +93,15 @@ export function SessionSetup({
             const selectedProjects = projects
                 .filter((p) => selectedIds.includes(p.id))
                 .map((p) => ({ id: p.id, name: p.name, color: p.color }));
-            const activeSession = await createActiveSession({
-                taskId: selectedTask?.id ?? null,
-                phase: 'focus',
-                phaseDurationSeconds: durationSeconds,
-            });
-
-            if (!activeSession.success) {
-                await abandonSession(result.data.id, 0);
-                setError(activeSession.error);
-                setIsSubmitting(false);
-                return;
-            }
 
             onStart({
                 sessionId: result.data.id,
                 taskId: selectedTask?.id,
                 projects: selectedProjects,
                 task: sessionTask,
+                description: description.trim() || undefined,
                 focusMode,
                 durationSeconds,
-                activeSessionVersion: activeSession.data.version,
             });
         } else {
             setError(result.error);
@@ -144,7 +131,7 @@ export function SessionSetup({
                 />
                 {selectedTask ? (
                     <p className="text-sm text-[var(--text-secondary)]">
-                        Starting {sessionMode === 'guest' ? 'a local focus block for ' : 'a synced focus block for ' }
+                        Starting a focus block for
                         <span className="font-medium text-[var(--text-primary)]">
                             {selectedTask.title}
                         </span>
@@ -152,7 +139,7 @@ export function SessionSetup({
                     </p>
                 ) : trimmedQuickTask ? (
                     <p className="text-sm text-[var(--text-secondary)]">
-                        Starting {sessionMode === 'guest' ? 'a local focus block for ' : 'a synced focus block for ' }
+                        Starting a focus block for
                         <span className="font-medium text-[var(--text-primary)]">
                             {trimmedQuickTask}
                         </span>

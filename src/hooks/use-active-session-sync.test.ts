@@ -19,7 +19,6 @@ describe('use-active-session-sync helpers', () => {
                     color: '#A0A0FF',
                 },
             ],
-            phase: 'focus',
             phaseStartedAt: new Date('2026-03-10T10:00:00.000Z'),
             phaseDurationSeconds: 1500,
             isPaused: false,
@@ -40,7 +39,6 @@ describe('use-active-session-sync helpers', () => {
                     color: '#A0A0FF',
                 },
             ],
-            activeSessionVersion: 4,
             isPaused: false,
         });
     });

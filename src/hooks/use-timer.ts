@@ -3,11 +3,6 @@
 import { useCallback, useEffect, useReducer, useRef } from 'react';
 import { abandonSession, completeSession } from '@/actions/session-actions';
 import { clearTimer, loadTimer, saveTimer } from './use-timer-persistence';
-import {
-    buildActiveTimerFromSession,
-    useActiveSessionSync,
-} from './use-active-session-sync';
-import { shouldResetToIdleOnMissingSyncedSession } from './use-timer-sync-guards';
 import { playAlarm, stopAlarm } from '@/lib/alarm';
 import {
     requestNotificationPermission,
@@ -33,7 +28,6 @@ export interface UseTimerReturn {
     readonly phase: TimerPhase;
     readonly progress: number;
     readonly isPaused: boolean;
-    readonly showRemoteUpdate: boolean;
     readonly justCompletedFocus: boolean;
     readonly startTimer: (params: StartTimerParams) => void;
     readonly pauseTimer: () => Promise<void>;
@@ -42,13 +36,11 @@ export interface UseTimerReturn {
 }
 
 interface UseTimerOptions {
-    readonly syncEnabled?: boolean;
     readonly sessionMode?: TimerSessionMode;
 }
 
 const TICK_MS = 1000;
 const COMPLETION_PULSE_MS = 800;
-const REMOTE_UPDATE_PULSE_MS = 2400;
 
 function createActiveTimer(params: StartTimerParams): ActiveTimer {
     return {
@@ -63,7 +55,6 @@ function createActiveTimer(params: StartTimerParams): ActiveTimer {
         isPaused: false,
         pausedAt: null,
         totalPausedSeconds: 0,
-        activeSessionVersion: params.activeSessionVersion,
     };
 }
 
@@ -144,10 +135,7 @@ function restoreTimerState(sessionMode: TimerSessionMode): TimerState {
 }
 
 export function useTimer(options: UseTimerOptions = {}): UseTimerReturn {
-    const {
-        syncEnabled = true,
-        sessionMode = syncEnabled ? 'signed-in' : 'guest',
-    } = options;
+    const { sessionMode = 'signed-in' } = options;
     const [timerState, dispatch] = useReducer(
         reduceTimerState,
         sessionMode,
@@ -164,14 +152,6 @@ export function useTimer(options: UseTimerOptions = {}): UseTimerReturn {
         isPaused,
         justCompletedFocus,
     } = timerState;
-
-    const {
-        session: syncedSession,
-        isLoading: isSyncLoading,
-        showRemoteUpdate,
-        dismissRemoteUpdate,
-        runAction,
-    } = useActiveSessionSync({ enabled: syncEnabled });
 
     const clearIntervalSafe = useCallback(() => {
         if (intervalRef.current) {
@@ -193,50 +173,6 @@ export function useTimer(options: UseTimerOptions = {}): UseTimerReturn {
     useEffect(() => {
         void requestNotificationPermission();
     }, []);
-
-    useEffect(() => {
-        if (!showRemoteUpdate) return;
-
-        const timeoutId = window.setTimeout(() => {
-            dismissRemoteUpdate();
-        }, REMOTE_UPDATE_PULSE_MS);
-
-        return () => {
-            window.clearTimeout(timeoutId);
-        };
-    }, [dismissRemoteUpdate, showRemoteUpdate]);
-
-    useEffect(() => {
-        if (syncedSession) {
-            transitionInFlightRef.current = false;
-            dispatch({ type: 'apply-synced-session', session: syncedSession });
-            if (syncedSession.phase === 'focus' && syncedSession.sessionId) {
-                saveTimer(buildActiveTimerFromSession(syncedSession));
-            } else {
-                clearTimer();
-            }
-            return;
-        }
-
-        if (
-            syncEnabled &&
-            shouldResetToIdleOnMissingSyncedSession({
-                syncedSession,
-                isSyncLoading,
-                activeSessionVersion: activeTimer?.activeSessionVersion,
-                phase,
-            })
-        ) {
-            resetToIdle();
-        }
-    }, [
-        activeTimer?.activeSessionVersion,
-        isSyncLoading,
-        phase,
-        resetToIdle,
-        syncEnabled,
-        syncedSession,
-    ]);
 
     useEffect(() => {
         if (!justCompletedFocus) return;
@@ -277,77 +213,39 @@ export function useTimer(options: UseTimerOptions = {}): UseTimerReturn {
         };
     }, [phase]);
 
+    // Phase completion — all local
     useEffect(() => {
         if (isPaused || transitionInFlightRef.current) {
             return;
         }
 
-        if (!syncEnabled) {
-            if (phase !== 'focus' || !activeTimer || remainingSeconds > 0) {
-                return;
-            }
+        if (phase !== 'focus' || !activeTimer || remainingSeconds > 0) {
+            return;
+        }
 
-            transitionInFlightRef.current = true;
-            dispatch({ type: 'pulse-completed-focus' });
-            playAlarm();
-            sendTimerCompleteNotification(activeTimer.task);
+        transitionInFlightRef.current = true;
+        dispatch({ type: 'pulse-completed-focus' });
+        playAlarm();
+        sendTimerCompleteNotification(activeTimer.task);
+
+        if (sessionMode === 'guest') {
             appendGuestSessionRecord({
                 timer: activeTimer,
                 status: 'completed',
                 elapsedSeconds: activeTimer.durationSeconds,
             });
-            resetToIdle(true);
-            return;
+        } else {
+            void completeSession(activeTimer.sessionId);
         }
 
-        if (!syncedSession || remainingSeconds > 0) {
-            return;
-        }
-
-        transitionInFlightRef.current = true;
-        const currentSyncedSession = syncedSession;
-
-        const handlePhaseCompletion = async () => {
-            if (!currentSyncedSession) {
-                transitionInFlightRef.current = false;
-                return;
-            }
-
-            if (currentSyncedSession.phase === 'focus') {
-                dispatch({ type: 'pulse-completed-focus' });
-                playAlarm();
-                sendTimerCompleteNotification(
-                    currentSyncedSession.taskLabel ?? 'Focus session'
-                );
-
-                if (currentSyncedSession.sessionId) {
-                    await completeSession(currentSyncedSession.sessionId);
-                }
-
-                const result = await runAction(
-                    'skip',
-                    currentSyncedSession.version
-                );
-                if (!result.success || !result.data) {
-                    transitionInFlightRef.current = false;
-                }
-                return;
-            }
-
-            await runAction('stop', currentSyncedSession.version);
-            resetToIdle();
-        };
-
-        void handlePhaseCompletion();
+        resetToIdle(true);
     }, [
         activeTimer,
         isPaused,
         phase,
         remainingSeconds,
         resetToIdle,
-        runAction,
-        syncEnabled,
-        syncedSession,
+        sessionMode,
     ]);
 
     const startTimer = useCallback((params: StartTimerParams) => {
@@ -362,92 +260,62 @@ export function useTimer(options: UseTimerOptions = {}): UseTimerReturn {
     }, [clearIntervalSafe, sessionMode]);
 
     const pauseTimer = useCallback(async () => {
-        if (phase === 'idle' || isPaused) return;
+        if (phase === 'idle' || isPaused || !phaseTiming || !activeTimer) return;
 
-        if (!syncedSession) {
-            if (!phaseTiming) return;
-            const pausedAt = Date.now();
-            if (activeTimer) {
-                const updatedTimer = {
-                    ...activeTimer,
-                    isPaused: true,
-                    pausedAt,
-                };
-                dispatch({
-                    type: 'pause-local',
-                    timer: updatedTimer,
-                    timing: {
-                        ...phaseTiming,
-                        pausedAt,
-                    },
-                });
-                saveTimer(updatedTimer);
-                if (sessionMode === 'guest') {
-                    persistGuestActiveTimer(updatedTimer);
-                }
-            }
-            return;
+        const pausedAt = Date.now();
+        const updatedTimer = {
+            ...activeTimer,
+            isPaused: true,
+            pausedAt,
+        };
+        dispatch({
+            type: 'pause-local',
+            timer: updatedTimer,
+            timing: {
+                ...phaseTiming,
+                pausedAt,
+            },
+        });
+        saveTimer(updatedTimer);
+        if (sessionMode === 'guest') {
+            persistGuestActiveTimer(updatedTimer);
         }
-
-        await runAction('pause', syncedSession.version);
-    }, [activeTimer, isPaused, phase, phaseTiming, runAction, sessionMode, syncedSession]);
+    }, [activeTimer, isPaused, phase, phaseTiming, sessionMode]);
 
     const resumeTimer = useCallback(async () => {
-        if (phase === 'idle' || !isPaused) return;
+        if (phase === 'idle' || !isPaused || !phaseTiming || phaseTiming.pausedAt === null || !activeTimer) return;
 
-        if (!syncedSession) {
-            if (!phaseTiming || phaseTiming.pausedAt === null) return;
-            const now = Date.now();
-            const pauseDurationSeconds =
-                (now - phaseTiming.pausedAt) / 1000;
+        const now = Date.now();
+        const pauseDurationSeconds =
+            (now - phaseTiming.pausedAt) / 1000;
 
-            const nextTiming = {
-                ...phaseTiming,
-                pausedAt: null,
-                totalPausedSeconds:
-                    phaseTiming.totalPausedSeconds + pauseDurationSeconds,
-            };
+        const nextTiming = {
+            ...phaseTiming,
+            pausedAt: null,
+            totalPausedSeconds:
+                phaseTiming.totalPausedSeconds + pauseDurationSeconds,
+        };
 
-            if (activeTimer) {
-                const updatedTimer = {
-                    ...activeTimer,
-                    isPaused: false,
-                    pausedAt: null,
-                    totalPausedSeconds: nextTiming.totalPausedSeconds,
-                };
-                dispatch({
-                    type: 'resume-local',
-                    timer: updatedTimer,
-                    timing: nextTiming,
-                });
-                saveTimer(updatedTimer);
-                if (sessionMode === 'guest') {
-                    persistGuestActiveTimer(updatedTimer);
-                }
-            }
-            return;
+        const updatedTimer = {
+            ...activeTimer,
+            isPaused: false,
+            pausedAt: null,
+            totalPausedSeconds: nextTiming.totalPausedSeconds,
+        };
+        dispatch({
+            type: 'resume-local',
+            timer: updatedTimer,
+            timing: nextTiming,
+        });
+        saveTimer(updatedTimer);
+        if (sessionMode === 'guest') {
+            persistGuestActiveTimer(updatedTimer);
         }
-
-        await runAction('resume', syncedSession.version);
-    }, [activeTimer, isPaused, phase, phaseTiming, runAction, sessionMode, syncedSession]);
+    }, [activeTimer, isPaused, phase, phaseTiming, sessionMode]);
 
     const stopTimer = useCallback(async () => {
         clearIntervalSafe();
         stopAlarm();
-
-        if (syncedSession) {
-            if (syncedSession.phase === 'focus' && syncedSession.sessionId) {
-                const elapsedSeconds = Math.max(
-                    0,
-                    syncedSession.phaseDurationSeconds - remainingSeconds
-                );
-                await abandonSession(syncedSession.sessionId, elapsedSeconds);
-            }
-
-            await runAction('stop', syncedSession.version);
-            resetToIdle();
-            return;
-        }
 
         if (activeTimer) {
             const elapsedSeconds = Math.max(
@@ -472,9 +340,7 @@ export function useTimer(options: UseTimerOptions = {}): UseTimerReturn {
         clearIntervalSafe,
         remainingSeconds,
         resetToIdle,
-        runAction,
         sessionMode,
-        syncedSession,
     ]);
 
     const totalDurationSeconds =
@@ -493,7 +359,6 @@ export function useTimer(options: UseTimerOptions = {}): UseTimerReturn {
         phase,
         progress,
         isPaused,
-        showRemoteUpdate,
         justCompletedFocus,
         startTimer,
         pauseTimer,

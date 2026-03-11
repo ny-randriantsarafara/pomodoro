@@ -2,16 +2,10 @@ import { render, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { SessionSetup } from './session-setup';
-import { abandonSession, startSession } from '@/actions/session-actions';
-import { createActiveSession } from '@/actions/active-session-actions';
+import { startSession } from '@/actions/session-actions';
 
 vi.mock('@/actions/session-actions', () => ({
     startSession: vi.fn(),
-    abandonSession: vi.fn(),
-}));
-
-vi.mock('@/actions/active-session-actions', () => ({
-    createActiveSession: vi.fn(),
 }));
 
 const task = {
@@ -30,8 +24,6 @@ const task = {
 describe('SessionSetup', () => {
     beforeEach(() => {
         vi.mocked(startSession).mockReset();
-        vi.mocked(abandonSession).mockReset();
-        vi.mocked(createActiveSession).mockReset();
     });
 
     it('lets an existing task enable start without requiring projects', async () => {
@@ -84,7 +76,6 @@ describe('SessionSetup', () => {
         await user.click(startButton);
 
         expect(startSession).not.toHaveBeenCalled();
-        expect(createActiveSession).not.toHaveBeenCalled();
 
         expect(onStart).toHaveBeenCalledWith(
             expect.objectContaining({
@@ -97,7 +88,7 @@ describe('SessionSetup', () => {
         );
     });
 
-    it('creates a synced active session after starting a task-backed focus session', async () => {
+    it('starts a focus session with DB persistence for signed-in users', async () => {
         const user = userEvent.setup();
         const onStart = vi.fn();
 
@@ -105,22 +96,6 @@ describe('SessionSetup', () => {
             success: true,
             data: {
                 id: 'session-1',
-            },
-        } as never);
-
-        vi.mocked(createActiveSession).mockResolvedValue({
-            success: true,
-            data: {
-                sessionId: 'session-1',
-                taskId: 'task-1',
-                taskLabel: 'Write release notes',
-                phase: 'focus',
-                phaseStartedAt: new Date('2026-03-10T10:00:00.000Z'),
-                phaseDurationSeconds: 1500,
-                isPaused: false,
-                pausedAt: null,
-                totalPausedSeconds: 0,
-                version: 1,
             },
         } as never);
 
@@ -151,20 +126,11 @@ describe('SessionSetup', () => {
             );
         });
 
-        await waitFor(() => {
-            expect(createActiveSession).toHaveBeenCalledWith({
-                taskId: 'task-1',
-                phase: 'focus',
-                phaseDurationSeconds: 1500,
-            });
-        });
-
         expect(onStart).toHaveBeenCalledWith(
             expect.objectContaining({
                 sessionId: 'session-1',
                 taskId: 'task-1',
                 task: 'Write release notes',
-                activeSessionVersion: 1,
                 projects: [],
             })
         );

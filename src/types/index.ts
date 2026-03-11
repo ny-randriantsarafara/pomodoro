@@ -18,7 +18,6 @@ export interface StartTimerParams {
     readonly description?: string;
     readonly focusMode: FocusMode;
     readonly durationSeconds: number;
-    readonly activeSessionVersion?: number;
 }
 
 export interface TimerConfig {
@@ -53,7 +52,6 @@ export interface ActiveTimer {
     readonly isPaused: boolean;
     readonly pausedAt: number | null;
     readonly totalPausedSeconds: number;
-    readonly activeSessionVersion?: number;
 }
 
 export interface ActiveSessionSnapshot {

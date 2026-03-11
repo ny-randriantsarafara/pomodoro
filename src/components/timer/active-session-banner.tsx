@@ -4,10 +4,6 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { loadTimer } from '@/hooks/use-timer-persistence';
-import {
-    getSyncedRemainingSeconds,
-    useActiveSessionSync,
-} from '@/hooks/use-active-session-sync';
 import { cn } from '@/lib/utils';
 import type { SessionProjectRef } from '@/types';
 
@@ -39,19 +35,18 @@ function computeLocalRemainingSeconds() {
 
 export function ActiveSessionBanner() {
     const pathname = usePathname();
-    const { session } = useActiveSessionSync();
-    const [localRemainingSeconds, setLocalRemainingSeconds] = useState(0);
-    const [localTask, setLocalTask] = useState<string | null>(null);
-    const [localProjects, setLocalProjects] = useState<
+    const [remainingSeconds, setRemainingSeconds] = useState(0);
+    const [task, setTask] = useState<string | null>(null);
+    const [projects, setProjects] = useState<
         ReadonlyArray<SessionProjectRef>
     >([]);
 
     useEffect(() => {
         const tick = () => {
             const local = computeLocalRemainingSeconds();
-            setLocalRemainingSeconds(local.remainingSeconds);
-            setLocalTask(local.timer?.task ?? null);
-            setLocalProjects(local.timer?.projects ?? []);
+            setRemainingSeconds(local.remainingSeconds);
+            setTask(local.timer?.task ?? null);
+            setProjects(local.timer?.projects ?? []);
         };
 
         tick();
@@ -65,13 +60,9 @@ export function ActiveSessionBanner() {
         return null;
     }
 
-    const remainingSeconds = session
-        ? getSyncedRemainingSeconds(session)
-        : localRemainingSeconds;
-    const taskLabel =
-        session?.taskLabel?.trim() || localTask?.trim() || 'Active session';
+    const taskLabel = task?.trim() || 'Active session';
 
-    if (!session && !localTask) {
+    if (!task) {
         return null;
     }
 
@@ -85,18 +76,16 @@ export function ActiveSessionBanner() {
             )}
             style={{ borderBottomWidth: 1, borderBottomColor: 'var(--accent)' }}
         >
-            {!session ? (
-                <span className="flex shrink-0 items-center gap-1">
-                    {localProjects.map((project) => (
-                        <span
-                            key={project.id}
-                            className="h-2 w-2 shrink-0 rounded-full"
-                            style={{ backgroundColor: project.color }}
-                            aria-hidden
-                        />
-                    ))}
-                </span>
-            ) : null}
+            <span className="flex shrink-0 items-center gap-1">
+                {projects.map((project) => (
+                    <span
+                        key={project.id}
+                        className="h-2 w-2 shrink-0 rounded-full"
+                        style={{ backgroundColor: project.color }}
+                        aria-hidden
+                    />
+                ))}
+            </span>
             <span className="truncate font-medium text-[var(--text-primary)]">
                 {taskLabel}
             </span>

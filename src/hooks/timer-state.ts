@@ -1,5 +1,4 @@
-import { buildActiveTimerFromSession } from './use-active-session-sync';
-import type { ActiveSessionSnapshot, ActiveTimer } from '@/types';
+import type { ActiveTimer } from '@/types';
 
 export type TimerPhase = 'idle' | 'focus' | 'break';
 
@@ -23,7 +22,6 @@ export interface TimerState {
 export type TimerSessionMode = 'signed-in' | 'guest';
 
 export type TimerAction =
-    | { readonly type: 'apply-synced-session'; readonly session: ActiveSessionSnapshot }
     | { readonly type: 'clear-completed-focus' }
     | { readonly type: 'pause-local'; readonly timer: ActiveTimer; readonly timing: PhaseTiming }
     | { readonly type: 'pulse-completed-focus' }
@@ -34,10 +32,6 @@ export type TimerAction =
     | { readonly type: 'resume-local'; readonly timer: ActiveTimer; readonly timing: PhaseTiming }
     | { readonly type: 'start'; readonly timer: ActiveTimer }
     | { readonly type: 'tick'; readonly remainingSeconds: number };
-
-function getPhaseTimestampMs(value: Date | string): number {
-    return value instanceof Date ? value.getTime() : new Date(value).getTime();
-}
 
 export function computeRemainingSeconds(
     timing: PhaseTiming,
@@ -80,90 +74,11 @@ export function shouldRestorePersistedTimer(
     return sessionMode === 'guest' || !timer.sessionId.startsWith('guest-');
 }
 
-export function buildTimerStateFromSyncedSession(
-    session: ActiveSessionSnapshot,
-    nowMs: number = Date.now()
-): TimerState {
-    if (session.phase === 'focus') {
-        if (session.sessionId) {
-            const timer = buildActiveTimerFromSession(session);
-            return {
-                activeTimer: timer,
-                phase: 'focus',
-                remainingSeconds: computeRemainingSeconds(
-                    buildPhaseTimingFromTimer(timer),
-                    session.isPaused,
-                    nowMs
-                ),
-                breakDurationSeconds: 0,
-                phaseTiming: buildPhaseTimingFromTimer(timer),
-                isPaused: session.isPaused,
-                justCompletedFocus: false,
-            };
-        }
-
-        // Focus phase but sessionId not yet available (race condition).
-        // Build focus state from phase timing so the timer counts down correctly.
-        const phaseTiming: PhaseTiming = {
-            startedAt: getPhaseTimestampMs(session.phaseStartedAt),
-            durationSeconds: session.phaseDurationSeconds,
-            pausedAt: session.pausedAt
-                ? getPhaseTimestampMs(session.pausedAt)
-                : null,
-            totalPausedSeconds: session.totalPausedSeconds,
-        };
-
-        return {
-            activeTimer: null,
-            phase: 'focus',
-            remainingSeconds: computeRemainingSeconds(
-                phaseTiming,
-                session.isPaused,
-                nowMs
-            ),
-            breakDurationSeconds: 0,
-            phaseTiming,
-            isPaused: session.isPaused,
-            justCompletedFocus: false,
-        };
-    }
-
-    // Break phases (shortBreak / longBreak)
-    const phaseTiming: PhaseTiming = {
-        startedAt: getPhaseTimestampMs(session.phaseStartedAt),
-        durationSeconds: session.phaseDurationSeconds,
-        pausedAt: session.pausedAt
-            ? getPhaseTimestampMs(session.pausedAt)
-            : null,
-        totalPausedSeconds: session.totalPausedSeconds,
-    };
-
-    return {
-        activeTimer: null,
-        phase: 'break',
-        remainingSeconds: computeRemainingSeconds(
-            phaseTiming,
-            session.isPaused,
-            nowMs
-        ),
-        breakDurationSeconds: session.phaseDurationSeconds,
-        phaseTiming,
-        isPaused: session.isPaused,
-        justCompletedFocus: false,
-    };
-}
-
 export function reduceTimerState(
     state: TimerState,
     action: TimerAction
 ): TimerState {
     switch (action.type) {
-        case 'apply-synced-session': {
-            return {
-                ...buildTimerStateFromSyncedSession(action.session),
-                justCompletedFocus: state.justCompletedFocus,
-            };
-        }
         case 'clear-completed-focus':
             return {
                 ...state,
