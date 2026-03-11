@@ -84,24 +84,52 @@ export function buildTimerStateFromSyncedSession(
     session: ActiveSessionSnapshot,
     nowMs: number = Date.now()
 ): TimerState {
-    if (session.phase === 'focus' && session.sessionId) {
-        const timer = buildActiveTimerFromSession(session);
+    if (session.phase === 'focus') {
+        if (session.sessionId) {
+            const timer = buildActiveTimerFromSession(session);
+            return {
+                activeTimer: timer,
+                phase: 'focus',
+                remainingSeconds: computeRemainingSeconds(
+                    buildPhaseTimingFromTimer(timer),
+                    session.isPaused,
+                    nowMs
+                ),
+                breakDurationSeconds: 0,
+                phaseTiming: buildPhaseTimingFromTimer(timer),
+                isPaused: session.isPaused,
+                justCompletedFocus: false,
+            };
+        }
+
+        // Focus phase but sessionId not yet available (race condition).
+        // Build focus state from phase timing so the timer counts down correctly.
+        const phaseTiming: PhaseTiming = {
+            startedAt: getPhaseTimestampMs(session.phaseStartedAt),
+            durationSeconds: session.phaseDurationSeconds,
+            pausedAt: session.pausedAt
+                ? getPhaseTimestampMs(session.pausedAt)
+                : null,
+            totalPausedSeconds: session.totalPausedSeconds,
+        };
+
         return {
-            activeTimer: timer,
+            activeTimer: null,
             phase: 'focus',
             remainingSeconds: computeRemainingSeconds(
-                buildPhaseTimingFromTimer(timer),
+                phaseTiming,
                 session.isPaused,
                 nowMs
             ),
             breakDurationSeconds: 0,
-            phaseTiming: buildPhaseTimingFromTimer(timer),
+            phaseTiming,
             isPaused: session.isPaused,
             justCompletedFocus: false,
         };
     }
 
-    const phaseTiming = {
+    // Break phases (shortBreak / longBreak)
+    const phaseTiming: PhaseTiming = {
         startedAt: getPhaseTimestampMs(session.phaseStartedAt),
         durationSeconds: session.phaseDurationSeconds,
         pausedAt: session.pausedAt
