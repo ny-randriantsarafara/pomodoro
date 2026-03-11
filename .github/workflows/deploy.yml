@@ -64,9 +64,7 @@ jobs:
             ENV_FILE="$DEPLOY_DIR/.migration.env"
 
             mkdir -p "$DEPLOY_DIR"
-            cat > "$ENV_FILE" <<'ENVEOF'
-DATABASE_URL=${{ secrets.DATABASE_URL }}
-ENVEOF
+            printf '%s\n' "DATABASE_URL=${{ secrets.DATABASE_URL }}" > "$ENV_FILE"
             trap 'rm -f "$ENV_FILE"' EXIT
 
             docker pull "$IMAGE"
