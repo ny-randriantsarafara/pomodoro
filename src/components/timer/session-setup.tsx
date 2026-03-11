@@ -1,14 +1,13 @@
 'use client';
 
-import { useState, useCallback, useMemo } from 'react';
-import { X, Search } from 'lucide-react';
+import { useState, useCallback } from 'react';
 import { startSession } from '@/actions/session-actions';
 import { FOCUS_MODES, TASK_MAX_LENGTH } from '@/lib/constants';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ModeSelector } from './mode-selector';
 import { TaskPicker } from './task-picker';
-import { cn } from '@/lib/utils';
+import { ProjectPicker } from './project-picker';
 import type { Project, Task } from '@/lib/db/schema';
 import type { FocusMode } from '@/lib/db/schema';
 import type { StartTimerParams } from '@/types';
@@ -33,17 +32,6 @@ export function SessionSetup({
     const [focusMode, setFocusMode] = useState<FocusMode>('short');
     const [error, setError] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [projectSearch, setProjectSearch] = useState('');
-
-    const filteredProjects = useMemo(() => {
-        if (!projectSearch.trim()) return projects;
-        const query = projectSearch.toLowerCase();
-        return projects.filter(
-            (p) =>
-                p.name.toLowerCase().includes(query) ||
-                selectedIds.includes(p.id)
-        );
-    }, [projects, projectSearch, selectedIds]);
 
     const selectedTask =
         tasks.find((task) => task.id === selectedTaskId) ?? null;
@@ -156,59 +144,12 @@ export function SessionSetup({
                         (optional)
                     </span>
                 </label>
-                {projects.length > 6 && (
-                    <div className="relative">
-                        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-secondary)]" />
-                        <input
-                            type="text"
-                            value={projectSearch}
-                            onChange={(e) => setProjectSearch(e.target.value)}
-                            placeholder="Filter projects..."
-                            className="h-8 w-full rounded-lg border border-[var(--border)] bg-[var(--background)] pl-9 pr-3 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-secondary)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
-                            disabled={isSubmitting}
-                        />
-                    </div>
-                )}
-                <div className="flex flex-wrap gap-2">
-                    {filteredProjects.map((p) => {
-                        const isSelected = selectedIds.includes(p.id);
-                        return (
-                            <button
-                                key={p.id}
-                                type="button"
-                                disabled={isSubmitting}
-                                onClick={() => toggleProject(p.id)}
-                                className={cn(
-                                    'inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-colors',
-                                    isSelected
-                                        ? 'border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--text-primary)]'
-                                        : 'border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--text-secondary)]',
-                                    isSubmitting && 'cursor-not-allowed opacity-50'
-                                )}
-                            >
-                                <span
-                                    className="h-2.5 w-2.5 shrink-0 rounded-full"
-                                    style={{ backgroundColor: p.color }}
-                                    aria-hidden
-                                />
-                                <span className="truncate">{p.name}</span>
-                                {isSelected && (
-                                    <X className="h-3 w-3 shrink-0 text-[var(--text-secondary)]" aria-hidden />
-                                )}
-                            </button>
-                        );
-                    })}
-                </div>
-                {projectSearch && filteredProjects.length === 0 && (
-                    <p className="text-sm text-[var(--text-secondary)]">
-                        No projects matching &ldquo;{projectSearch}&rdquo;
-                    </p>
-                )}
-                {projects.length === 0 && (
-                    <p className="text-sm text-[var(--text-secondary)]">
-                        No projects yet. You can still start a task-only session.
-                    </p>
-                )}
+                <ProjectPicker
+                    projects={projects}
+                    selectedIds={selectedIds}
+                    onToggle={toggleProject}
+                    disabled={isSubmitting}
+                />
             </div>
 
             <div className="flex flex-col gap-2">

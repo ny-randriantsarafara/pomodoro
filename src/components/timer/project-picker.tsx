@@ -180,7 +180,7 @@ export function ProjectPicker({
                             <span>More</span>
                         </button>
                     )}
-                    renderItem={({ item, isHighlighted }) => {
+                    renderItem={({ item }) => {
                         const isItemSelected = selectedIds.includes(item.id);
                         const project = item.project;
                         return (
