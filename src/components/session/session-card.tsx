@@ -145,7 +145,7 @@ export function SessionCard({ session }: SessionCardProps) {
                         </p>
                     )}
                     {session.description && (
-                        <p className="text-xs text-[var(--text-secondary)]">
+                        <p className="whitespace-pre-wrap text-xs text-[var(--text-secondary)]">
                             {session.description}
                         </p>
                     )}

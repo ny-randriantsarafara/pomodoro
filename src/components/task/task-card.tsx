@@ -83,7 +83,7 @@ export function TaskCard({ task }: TaskCardProps) {
             </CardHeader>
 
             {task.note ? (
-                <p className="text-sm text-[var(--text-secondary)]">{task.note}</p>
+                <p className="whitespace-pre-wrap text-sm text-[var(--text-secondary)]">{task.note}</p>
             ) : null}
 
             {dueDate ? (
