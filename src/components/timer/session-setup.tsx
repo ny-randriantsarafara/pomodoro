@@ -119,6 +119,7 @@ export function SessionSetup({
                     tasks={tasks}
                     selectedTaskId={selectedTaskId}
                     onSelect={(task) => setSelectedTaskId(task.id)}
+                    onDeselect={() => setSelectedTaskId(null)}
                     disabled={isSubmitting}
                 />
                 <Input
