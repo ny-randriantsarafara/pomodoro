@@ -31,6 +31,7 @@ export type TimerAction =
       }
     | { readonly type: 'resume-local'; readonly timer: ActiveTimer; readonly timing: PhaseTiming }
     | { readonly type: 'start'; readonly timer: ActiveTimer }
+    | { readonly type: 'start-break'; readonly breakDurationSeconds: number; readonly nowMs: number }
     | { readonly type: 'tick'; readonly remainingSeconds: number };
 
 export function computeRemainingSeconds(
@@ -117,6 +118,21 @@ export function reduceTimerState(
                 remainingSeconds: action.timer.durationSeconds,
                 breakDurationSeconds: 0,
                 phaseTiming: buildPhaseTimingFromTimer(action.timer),
+                isPaused: false,
+                justCompletedFocus: false,
+            };
+        case 'start-break':
+            return {
+                activeTimer: null,
+                phase: 'break',
+                remainingSeconds: action.breakDurationSeconds,
+                breakDurationSeconds: action.breakDurationSeconds,
+                phaseTiming: {
+                    startedAt: action.nowMs,
+                    durationSeconds: action.breakDurationSeconds,
+                    pausedAt: null,
+                    totalPausedSeconds: 0,
+                },
                 isPaused: false,
                 justCompletedFocus: false,
             };

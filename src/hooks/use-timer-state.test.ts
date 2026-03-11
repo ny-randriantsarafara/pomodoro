@@ -44,6 +44,49 @@ describe('reduceTimerState', () => {
             justCompletedFocus: true,
         });
     });
+
+    it('transitions to break phase with correct duration and timing', () => {
+        const nowMs = 100_000;
+        const breakDurationSeconds = 300;
+
+        const focusState: TimerState = {
+            ...idleState,
+            activeTimer: {
+                sessionId: 'sess-1',
+                projects: [],
+                task: 'Test task',
+                focusMode: 'short',
+                startedAt: 0,
+                durationSeconds: 1500,
+                isPaused: false,
+                pausedAt: null,
+                totalPausedSeconds: 0,
+            },
+            phase: 'focus',
+            remainingSeconds: 0,
+            justCompletedFocus: true,
+        };
+
+        const result = reduceTimerState(focusState, {
+            type: 'start-break',
+            breakDurationSeconds,
+            nowMs,
+        });
+
+        expect(result.phase).toBe('break');
+        expect(result.remainingSeconds).toBe(breakDurationSeconds);
+        expect(result.breakDurationSeconds).toBe(breakDurationSeconds);
+        expect(result.isPaused).toBe(false);
+        expect(result.phaseTiming).toEqual({
+            startedAt: nowMs,
+            durationSeconds: breakDurationSeconds,
+            pausedAt: null,
+            totalPausedSeconds: 0,
+        });
+        // activeTimer is cleared since focus session is done
+        expect(result.activeTimer).toBeNull();
+        expect(result.justCompletedFocus).toBe(false);
+    });
 });
 
 describe('shouldRestorePersistedTimer', () => {

@@ -10,6 +10,7 @@ import { TimerControls } from '@/components/timer/timer-controls';
 import { SessionSetup } from '@/components/timer/session-setup';
 import { PipTimer } from '@/components/timer/pip-timer';
 import type { Project, Task } from '@/lib/db/schema';
+import type { TimerSettings } from '@/types';
 import { formatTime } from '@/lib/format-time';
 
 export interface TimerViewProps {
@@ -17,6 +18,7 @@ export interface TimerViewProps {
     readonly tasks: ReadonlyArray<Task>;
     readonly sessionMode?: 'signed-in' | 'guest';
     readonly guestLabel?: string;
+    readonly timerSettings?: TimerSettings;
 }
 
 export function TimerView({
@@ -24,6 +26,7 @@ export function TimerView({
     tasks,
     sessionMode = 'signed-in',
     guestLabel,
+    timerSettings,
 }: TimerViewProps) {
     const {
         activeTimer,
@@ -38,6 +41,7 @@ export function TimerView({
         stopTimer,
     } = useTimer({
         sessionMode,
+        timerSettings,
     });
 
     const { isSupported, pipWindow, openPiP, closePiP } = usePiP();

@@ -10,7 +10,7 @@ import {
 } from '@/lib/notifications';
 import { DEFAULT_TIMER_SETTINGS } from '@/lib/settings';
 import { saveGuestWorkspace, loadGuestWorkspace } from '@/lib/guest-store';
-import type { ActiveTimer, StartTimerParams } from '@/types';
+import type { ActiveTimer, StartTimerParams, TimerSettings } from '@/types';
 import {
     buildPhaseTimingFromTimer,
     computeRemainingSeconds,
@@ -37,6 +37,7 @@ export interface UseTimerReturn {
 
 interface UseTimerOptions {
     readonly sessionMode?: TimerSessionMode;
+    readonly timerSettings?: TimerSettings;
 }
 
 const TICK_MS = 1000;
@@ -135,7 +136,7 @@ function restoreTimerState(sessionMode: TimerSessionMode): TimerState {
 }
 
 export function useTimer(options: UseTimerOptions = {}): UseTimerReturn {
-    const { sessionMode = 'signed-in' } = options;
+    const { sessionMode = 'signed-in', timerSettings = DEFAULT_TIMER_SETTINGS } = options;
     const [timerState, dispatch] = useReducer(
         reduceTimerState,
         sessionMode,
@@ -213,7 +214,7 @@ export function useTimer(options: UseTimerOptions = {}): UseTimerReturn {
         };
     }, [phase]);
 
-    // Phase completion — all local
+    // Focus phase completion — all local
     useEffect(() => {
         if (isPaused || transitionInFlightRef.current) {
             return;
@@ -238,15 +239,42 @@ export function useTimer(options: UseTimerOptions = {}): UseTimerReturn {
             void completeSession(activeTimer.sessionId);
         }
 
-        resetToIdle(true);
+        if (timerSettings.autoStartBreaks) {
+            clearIntervalSafe();
+            stopAlarm();
+            clearTimer();
+            if (sessionMode === 'guest') {
+                persistGuestActiveTimer(null);
+            }
+            const breakDurationSeconds = timerSettings.shortBreakMinutes * 60;
+            dispatch({
+                type: 'start-break',
+                breakDurationSeconds,
+                nowMs: Date.now(),
+            });
+            transitionInFlightRef.current = false;
+        } else {
+            resetToIdle(true);
+        }
     }, [
         activeTimer,
+        clearIntervalSafe,
         isPaused,
         phase,
         remainingSeconds,
         resetToIdle,
         sessionMode,
+        timerSettings,
     ]);
+
+    // Break phase completion — reset to idle when break timer finishes
+    useEffect(() => {
+        if (phase !== 'break' || remainingSeconds > 0) {
+            return;
+        }
+
+        resetToIdle();
+    }, [phase, remainingSeconds, resetToIdle]);
 
     const startTimer = useCallback((params: StartTimerParams) => {
         const timer = createActiveTimer(params);
