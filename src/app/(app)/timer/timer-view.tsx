@@ -31,14 +31,12 @@ export function TimerView({
         phase,
         progress,
         isPaused,
-        showRemoteUpdate,
         justCompletedFocus,
         startTimer,
         pauseTimer,
         resumeTimer,
         stopTimer,
     } = useTimer({
-        syncEnabled: sessionMode === 'signed-in',
         sessionMode,
     });
 
@@ -126,12 +124,6 @@ export function TimerView({
                     {guestLabel}
                 </p>
             ) : null}
-
-            {showRemoteUpdate && (
-                <p className="text-sm text-[var(--text-secondary)]">
-                    Timer updated from another device.
-                </p>
-            )}
 
             {/* PiP toggle — only when focus session active and browser supports it */}
             {phase === 'focus' && activeTimer && isSupported && (
