@@ -1,154 +1,80 @@
-# Pomodoro Product And Architecture
+# Pomodoro Product Architecture
 
-## Overview
+## Product Statement
 
-Pomodoro is a task-first focus timer built around low-friction session start, reliable timer recovery, and lightweight progress tracking. The current web product supports both local guest usage and authenticated sync, with signed-in active sessions visible across devices.
+Pomodoro is a task-first focus timer optimized for low-friction session start, reliable timer recovery, and practical daily progress tracking.
 
-The product has evolved from a project-centric timer into a broader focus workflow:
+The current product serves two usage modes:
 
-- tasks are first-class
-- project association is optional
-- guest mode works locally without an account
-- signed-in users can restore and control the same active session from another browser
+- **Guest mode** for local, no-account timer usage.
+- **Signed-in mode** for account-backed tasks, stats, settings, and cross-device active-session sync.
 
-## Product Goals
+## Goals
 
-- start a focus session in seconds
-- keep timer state reliable across refreshes and backgrounding
-- support local-only use without sign-up
-- support signed-in sync for tasks, settings, history, and active session state
-- show useful daily and historical progress without overwhelming the user
+- Start focus sessions in seconds.
+- Keep timer state correct across refreshes and tab/app switching.
+- Support useful local-only usage without sign-up.
+- Provide robust signed-in sync without realtime infra complexity.
+- Keep analytics helpful, not noisy.
 
-## Scope
+## Current Scope
 
-### Shipped
+### Implemented
 
-- focus sessions with short, average, and deep presets
-- pause, resume, and stop controls
-- task creation and task-backed sessions
-- optional project association for tasks and sessions
-- signed-in active session sync with shared live state
-- guest mode with a public landing page and local-only timer flow
-- task-aware log and stats views
-- timer and daily-goal settings
-- browser notifications and recovery-oriented persistence
+- Focus presets (short / average / deep) with pause, resume, and stop.
+- Task-backed sessions with optional project association.
+- Signed-in active-session sync with optimistic version checks.
+- Guest timer flow at `/guest/timer`.
+- Task-aware log and stats pages.
+- Timer and daily-goal settings.
+- Browser notification support.
 
-### Not Yet Shipped
+### Deferred
 
-- full guest-mode access to tasks, log, and stats
-- guest-to-account import execution
-- push-based active-session transport such as SSE or WebSockets
-- native desktop and mobile shells
-- OS-level distraction blocking
-- distraction inbox, routines, and export flows
+- Full guest access beyond timer-only flow.
+- Guest-to-account import execution.
+- Realtime transport (SSE/WebSocket) for active session updates.
+- Desktop/mobile shells and distraction tooling.
+- Export and routines/reminders.
 
-## Core Domains
+## Domain Model
 
-### Tasks
+- `tasks`: planning and ownership unit.
+- `sessions`: immutable historical records for reporting.
+- `active_sessions`: live signed-in timer state.
+- `user_settings`: timer and daily-goal preferences.
+- guest workspace storage: local-only tasks/sessions/settings/timer state.
 
-Tasks are the main planning unit. A user can create tasks, start focus sessions against them, and review focus output by task over time.
+Historical and live state are intentionally separated to keep sync and analytics predictable.
 
-Key attributes:
-
-- title
-- optional note
-- status
-- due date
-- estimated Pomodoros
-- completed Pomodoros
-
-### Sessions
-
-Sessions are historical records. They capture what happened for reporting, logs, and analytics. They are distinct from live timer state.
-
-### Active Session
-
-Active session state is the live timer model for signed-in users. It is server-owned and shared across devices using optimistic version checks and timestamp-based reconstruction.
-
-### Projects
-
-Projects remain available, especially for GitHub-backed organization, but they are no longer required to start a session.
-
-## User Experience Model
+## UX Model
 
 ### Entry Points
 
-- `/` is the public landing page
-- `/guest/timer` is the local-only guest timer
-- `/timer`, `/tasks`, `/log`, `/stats`, and `/settings` are authenticated routes
+- Public: `/`, `/guest/timer`
+- Authenticated: `/timer`, `/tasks`, `/log`, `/stats`, `/settings`
 
-### Guest Mode
+### Guest Mode Contract
 
-Guest mode is intentionally narrow in the current web product:
+- Local browser storage only.
+- No cross-device sync.
+- Data remains isolated from authenticated timer restoration.
 
-- a signed-out user can start a local timer immediately
-- guest data stays in browser storage
-- guest state does not sync across devices
-- sign-in can surface an upgrade banner when guest data exists locally
+### Signed-In Mode Contract
 
-### Signed-In Mode
+- Server is source of truth for live timer state.
+- Polling + optimistic updates + version checks drive reconciliation.
+- Conflicts resolve by reloading server state instead of silent overwrite.
 
-Signed-in mode is the full product path:
+## Constraints
 
-- tasks, settings, history, and stats are account-backed
-- the active session is shared across signed-in browsers
-- server state is the source of truth for live timer control
+- Polling-based sync favors simplicity over instant realtime behavior.
+- Guest flow remains intentionally narrower than authenticated flow.
+- Some roadmap capabilities are postponed to keep core timer reliability first.
 
-## Timer And Sync Model
+## Related Docs
 
-### Timer Accuracy
-
-Timer state is derived from persisted timestamps and pause metadata rather than visual tick counts. This allows recovery after refresh, backgrounding, or another device opening the same session.
-
-### Signed-In Sync
-
-Signed-in active sessions are stored on the server and reconciled through:
-
-- polling-based refresh
-- optimistic updates
-- version checks on mutations
-
-If two devices race, the losing client reloads current server state instead of silently overwriting it.
-
-### Guest Persistence
-
-Guest timers are stored locally and intentionally isolated from the signed-in timer flow. A guest timer should never be restored into the authenticated `/timer` route.
-
-## Data Model Direction
-
-The current product direction separates historical and live state:
-
-- `tasks` for planning and ownership
-- `sessions` for historical records
-- `active_sessions` for signed-in live timer state
-- `user_settings` for timer and goal preferences
-- guest workspace storage for local-only tasks, sessions, settings, and active timer state
-
-This split is what enables cross-device visibility without overloading historical session records with live state concerns.
-
-## Settings
-
-The settings model now includes:
-
-- work duration
-- short break duration
-- long break duration
-- long-break frequency
-- daily goal minutes
-- analytics opt-in
-
-This is the beginning of the broader settings surface described in the original spec.
-
-## Risks And Constraints
-
-- guest mode is still timer-only and does not expose the full app shell
-- guest import is surfaced but not executed yet
-- polling is sufficient for correctness but not instant in the same way push transport would be
-- several later-spec items remain intentionally deferred to keep the web core focused
-
-## Recommended Next Steps
-
-- implement guest import into authenticated accounts
-- expand guest mode beyond the timer when product priority justifies it
-- add distraction inbox and routine support
-- evaluate push-based session updates if polling latency becomes a UX issue
+- `../README.md` for documentation map.
+- `../features/session-workflow.md` for session CRUD behavior.
+- `../features/pip-timer.md` for PiP behavior.
+- `../implementation/ci-vps-migration-runbook.md` for deployment migration safety.

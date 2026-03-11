@@ -2,51 +2,54 @@
 
 **Date:** 2026-03-09
 
-## Overview
+## Purpose
 
-The active focus timer can be floated in a Picture-in-Picture window (similar to Google Meet), letting users see the countdown and control their session while on another tab.
+Allow an active focus timer to stay visible and controllable in a floating window while the user works in other tabs.
+
+## User Contract
+
+- Feature appears only when browser supports Document Picture-in-Picture.
+- Toggle is shown only during focus phase.
+- PiP closes automatically when focus phase ends.
+
+## Implementation
+
+### Hook: `src/hooks/use-pip.ts`
+
+`usePiP` wraps the Document PiP API and exposes:
+
+- `isSupported`
+- `pipWindow`
+- `openPiP()`
+- `closePiP()`
+
+When opening PiP, stylesheets from the main document are copied into the PiP window so existing Tailwind classes and CSS variables render correctly.
+
+### PiP UI: `src/components/timer/pip-timer.tsx`
+
+Rendered via portal into `pipWindow.document.body`.
+
+Displays:
+
+- remaining time,
+- task label,
+- pause/resume control,
+- abandon control.
+
+### Timer Integration: `src/app/(app)/timer/timer-view.tsx`
+
+Owns the toggle action and phase-based lifecycle:
+
+- open/close button is gated by support + focus phase,
+- leaving focus triggers `closePiP()` cleanup.
 
 ## Browser Support
 
-Uses the **Document Picture-in-Picture API** — supported in Chrome and Edge 116+. The feature is entirely hidden on unsupported browsers (graceful degradation via `isSupported` check).
+- Supported: Chromium browsers with Document PiP (Chrome/Edge 116+).
+- Unsupported browsers: feature is hidden (graceful degradation).
 
-## Architecture
+## Non-Goals
 
-### `usePiP` hook — `src/hooks/use-pip.ts`
-
-Wraps the Document PiP API and exposes:
-
-- `isSupported` — `typeof window.documentPictureInPicture !== 'undefined'`
-- `pipWindow: Window | null` — the active PiP window reference
-- `openPiP()` — calls `requestWindow({ width: 280, height: 220 })`, then copies all `<style>` and `<link rel="stylesheet">` elements from `document.head` into `pipWindow.document.head` so Tailwind classes and CSS custom properties (design tokens) work inside the PiP window
-- `closePiP()` — closes the PiP window if open
-
-The hook listens to `pagehide` on the PiP window to sync React state when the user closes the window manually. It also closes the PiP window on main-page unmount via a `useEffect` cleanup.
-
-### `PipTimer` component — `src/components/timer/pip-timer.tsx`
-
-Rendered via `createPortal` into `pipWindow.document.body`. Displays:
-
-- Countdown in monospace font
-- Task name (truncated)
-- Pause/Resume button (accent colour)
-- Abandon button (danger colour)
-
-Background is `#0A0A0B` to match the app's dark theme.
-
-Props: `pipWindow`, `remainingSeconds`, `activeTimer`, `onPause`, `onResume`, `onAbandon`.
-
-### PiP toggle button — `src/app/(app)/timer/timer-view.tsx`
-
-A "Pop out timer" / "Close PiP" text button using the `PictureInPicture2` icon from lucide-react. Rendered only when:
-
-- `phase === 'focus'`
-- `isSupported === true`
-
-`TimerView` also contains a `useEffect` that calls `closePiP()` whenever `phase` leaves `'focus'`, ensuring the PiP window closes automatically when a session ends or is abandoned.
-
-## Out of Scope
-
-- Safari / Firefox support
-- Break timer in PiP (focus sessions only)
-- Custom PiP window size controls
+- Safari/Firefox fallback implementation.
+- Break-phase PiP rendering.
+- User-configurable PiP window size.

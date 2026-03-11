@@ -1,61 +1,73 @@
 # CI-Driven VPS Migration Runbook
 
-## Purpose
+## Objective
 
-Run database migrations explicitly from CI, inside the VPS network, before application deployment.
+Apply schema migrations from CI without exposing production database access to the public internet.
 
-This avoids internet-exposed DB access and removes implicit schema changes during app startup.
+Core rule: migrations run **inside VPS networking** before app deploy.
 
-## Pipeline Contract
+## Deployment Contract
 
-Main branch deployment order:
+Main branch workflow order:
 
 1. `validate` (lint + tests)
-2. `build` (image publish)
-3. `migrate-on-vps` (risk scan + remote migration)
-4. `deploy` (only if migration succeeded)
+2. `build` (publish image)
+3. `migrate-on-vps` (risk scan + remote migration run)
+4. `deploy` (runs only when migration succeeds)
 
 `deploy` is fail-closed behind `migrate-on-vps`.
 
-## Migration Execution Model
+## `migrate-on-vps` Job Behavior
 
-`migrate-on-vps` performs two stages:
+### 1) Warning-Only Migration Risk Scan
 
-1. **Warning-only risk scan**
-   - command: `npm run db:check-risk`
-   - scanner inspects `drizzle/*.sql`
-   - reports warnings for risky statements (`DROP`, `TRUNCATE`, unbounded `DELETE`)
-   - does not block pipeline on warnings
+- command: `npm run db:check-risk`
+- target: `drizzle/*.sql`
+- warning patterns: `DROP TABLE`, `DROP COLUMN`, `TRUNCATE`, `DELETE ...` without `WHERE`
+- policy: warnings are logged but non-blocking
 
-2. **Remote migration inside VPS**
-   - CI SSHes to VPS with host key verification
-   - writes temporary env file containing `DATABASE_URL`
-   - pulls image `ghcr.io/ny-randriantsarafara/pomodoro:latest`
-   - runs one-shot container:
-     - network: `vps-net`
-     - command: `node scripts/migrate.mjs`
-   - removes temporary env file on exit
+### 2) Remote Migration Run On VPS
 
-## Runtime Behavior Change
+- CI connects over SSH with strict host key verification
+- temporary env file is created with `DATABASE_URL`
+- image `ghcr.io/ny-randriantsarafara/pomodoro:latest` is pulled
+- one-shot migration container runs on `vps-net`:
 
-Application startup no longer runs migrations in `scripts/entrypoint.sh`.
+```bash
+docker run --rm --network vps-net --env-file <temp-env> \
+  ghcr.io/ny-randriantsarafara/pomodoro:latest \
+  node scripts/migrate.mjs
+```
 
-Startup now only runs:
+- temporary env file is removed after execution
+
+## Application Startup Contract
+
+`scripts/entrypoint.sh` no longer runs migrations.
+It only starts the app server:
 
 ```sh
 exec node server.js
 ```
 
-## Operational Notes
+## Failure Handling
 
-- DB remains private to VPS networking.
-- Migration retries are done by rerunning pipeline after corrective action.
-- No automatic rollback is attempted.
-- For emergency manual execution, run the migration container from inside VPS network only.
+- migration failure stops workflow before deploy
+- no automatic rollback
+- recovery is explicit: fix migration, rerun pipeline
 
-## Verification Artifacts
+## Manual Emergency Run
 
-The repository includes targeted checks for this contract:
+If CI is unavailable, run migration from inside VPS network only:
+
+```bash
+docker run --rm --network vps-net \
+  -e DATABASE_URL='postgresql://...' \
+  ghcr.io/ny-randriantsarafara/pomodoro:latest \
+  node scripts/migrate.mjs
+```
+
+## Verification Coverage
 
 - `scripts/lib/migration-risk.test.mjs`
 - `scripts/check-migration-risk.test.mjs`
