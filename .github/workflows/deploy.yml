@@ -35,6 +35,48 @@ jobs:
       dockerfile: Dockerfile
       stable_tag: latest
 
+  migrate-on-vps:
+    name: Run DB migrations on VPS
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Warn on destructive migration patterns
+        run: npm run db:check-risk
+      - name: Run migrations inside VPS network
+        env:
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_HOST_KEY: ${{ secrets.VPS_HOST_KEY }}
+          IMAGE: ghcr.io/ny-randriantsarafara/pomodoro:latest
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          printf '%s\n' "$VPS_HOST_KEY" > ~/.ssh/known_hosts
+          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/vps.key
+          chmod 600 ~/.ssh/vps.key
+          ssh -i ~/.ssh/vps.key -o StrictHostKeyChecking=yes "$VPS_USER@$VPS_HOST" <<'EOF'
+            set -euo pipefail
+            DEPLOY_DIR="/home/deploy/apps/pomodoro"
+            IMAGE="ghcr.io/ny-randriantsarafara/pomodoro:latest"
+            ENV_FILE="$DEPLOY_DIR/.migration.env"
+
+            mkdir -p "$DEPLOY_DIR"
+            cat > "$ENV_FILE" <<'ENVEOF'
+DATABASE_URL=${{ secrets.DATABASE_URL }}
+ENVEOF
+            trap 'rm -f "$ENV_FILE"' EXIT
+
+            docker pull "$IMAGE"
+            docker run --rm \
+              --network vps-net \
+              --env-file "$ENV_FILE" \
+              "$IMAGE" \
+              node scripts/migrate.mjs
+          EOF
+
   prepare-deploy:
     name: Prepare deploy inputs
     runs-on: ubuntu-latest
@@ -57,7 +99,7 @@ jobs:
 
   deploy:
     name: Deploy to VPS
-    needs: [build, prepare-deploy]
+    needs: [build, prepare-deploy, migrate-on-vps]
     if: github.ref == 'refs/heads/main'
     uses: ny-randriantsarafara/vps-services/.github/workflows/deploy-compose.yml@main
     with:

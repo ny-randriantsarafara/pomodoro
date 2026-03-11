@@ -171,6 +171,7 @@ The app runs at [http://localhost:3000](http://localhost:3000). The landing page
 | `npm run test:e2e`    | Run Playwright E2E tests                             |
 | `npm run db:generate` | Generate Drizzle migration files from schema changes |
 | `npm run db:migrate`  | Apply pending migrations to the database             |
+| `npm run db:check-risk` | Scan migration SQL and emit warning-only risk hints |
 | `npm run db:studio`   | Open Drizzle Studio (database browser)               |
 
 ---
@@ -244,6 +245,19 @@ src/
 - Node.js 20+
 - PostgreSQL 17 (shared instance is fine, use a dedicated database)
 - A reverse proxy (nginx or caddy)
+- Docker with access to your app image
+
+### CI Deployment Order
+
+Main-branch deploys now run with explicit migration gating:
+
+1. `validate` (lint + tests)
+2. `build` (push image)
+3. `migrate-on-vps` (SSH into VPS, run `npm run db:check-risk`, then run migrations inside VPS network)
+4. `deploy` (only runs if migration step succeeded)
+
+This fail-closed order means app rollout is blocked when migrations fail.
+The app entrypoint no longer runs migrations on startup.
 
 ### Steps
 
@@ -261,14 +275,20 @@ npm ci
 #   - Auth app callback: https://yourdomain.com/api/auth/callback/github
 #   - Connections app callback: https://yourdomain.com/api/github/callback
 
-# 3. Run migrations
-npm run db:migrate
-
-# 4. Build
+# 3. Build
 npm run build
 
-# 5. Start
+# 4. Start
 npm start
+```
+
+If you need a manual migration outside CI, run it from inside the VPS network (not from public internet):
+
+```bash
+docker run --rm --network vps-net \
+  -e DATABASE_URL='postgresql://...' \
+  ghcr.io/ny-randriantsarafara/pomodoro:latest \
+  node scripts/migrate.mjs
 ```
 
 The app listens on port 3000. Put it behind nginx or caddy:

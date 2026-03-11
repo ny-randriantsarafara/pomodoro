@@ -12,7 +12,8 @@
         "test:e2e": "playwright test",
         "db:generate": "drizzle-kit generate",
         "db:migrate": "drizzle-kit migrate",
-        "db:studio": "drizzle-kit studio"
+        "db:studio": "drizzle-kit studio",
+        "db:check-risk": "node scripts/check-migration-risk.mjs"
     },
     "dependencies": {
         "@auth/core": "^0.41.0",

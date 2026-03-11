@@ -103,6 +103,17 @@ Two concrete issues were caught and corrected before closing the work:
 
 Both fixes are included in the final verified tree.
 
+## Deployment And Migration Safety Update (2026-03-11)
+
+The deployment pipeline now runs database migrations as an explicit gated stage inside the VPS network:
+
+- CI order: `validate -> build -> migrate-on-vps -> deploy`
+- migration risk scan is warning-only (patterns like `DROP`, `TRUNCATE`, unbounded `DELETE`)
+- deploy is fail-closed when migration execution fails
+- app startup no longer runs migrations in `scripts/entrypoint.sh`
+
+This keeps schema changes auditable and prevents implicit migration attempts on every container restart.
+
 ## Remaining Follow-Up Work
 
 The rollout intentionally left some product work for later:
