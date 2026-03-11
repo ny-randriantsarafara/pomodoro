@@ -1,35 +1,71 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import Link from 'next/link';
-import { Search } from 'lucide-react';
+import { MoreHorizontal } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Combobox } from '@/components/ui/combobox';
 import type { Task } from '@/lib/db/schema';
 
 export interface TaskPickerProps {
     readonly tasks: ReadonlyArray<Task>;
     readonly selectedTaskId: string | null;
     readonly onSelect: (task: Task) => void;
+    readonly onDeselect?: () => void;
     readonly disabled?: boolean;
 }
 
-const SEARCH_THRESHOLD = 5;
+export const MAX_VISIBLE_PILLS = 4;
 
-function sortByRecency(a: Task, b: Task): number {
+export function sortByRecency(a: Task, b: Task): number {
     if (b.actualPomodoros !== a.actualPomodoros) {
         return b.actualPomodoros - a.actualPomodoros;
     }
     return b.updatedAt.getTime() - a.updatedAt.getTime();
 }
 
+/**
+ * Returns up to MAX_VISIBLE_PILLS tasks for display as pills.
+ * If selectedId points to a task not in the top recent, it replaces the 4th slot.
+ */
+export function getVisibleTasks(
+    tasks: ReadonlyArray<Task>,
+    selectedId: string | null
+): Task[] {
+    if (tasks.length === 0) return [];
+
+    // Sort by recency
+    const sorted = [...tasks].sort(sortByRecency);
+
+    // If 4 or fewer tasks, return all
+    if (sorted.length <= MAX_VISIBLE_PILLS) {
+        return sorted;
+    }
+
+    // Get top tasks
+    const topTasks = sorted.slice(0, MAX_VISIBLE_PILLS);
+
+    // If no selection or selection is already in top tasks, return as-is
+    if (!selectedId || topTasks.some((t) => t.id === selectedId)) {
+        return topTasks;
+    }
+
+    // Selected task is not in top - find it and replace 4th slot
+    const selectedTask = sorted.find((t) => t.id === selectedId);
+    if (selectedTask) {
+        return [...topTasks.slice(0, MAX_VISIBLE_PILLS - 1), selectedTask];
+    }
+
+    return topTasks;
+}
+
 export function TaskPicker({
     tasks,
     selectedTaskId,
     onSelect,
+    onDeselect,
     disabled = false,
 }: TaskPickerProps) {
-    const [search, setSearch] = useState('');
-
     const activeTasks = useMemo(
         () =>
             tasks
@@ -38,15 +74,26 @@ export function TaskPicker({
         [tasks]
     );
 
-    const filteredTasks = useMemo(() => {
-        if (!search.trim()) return activeTasks;
-        const query = search.toLowerCase();
-        return activeTasks.filter(
-            (t) =>
-                t.title.toLowerCase().includes(query) ||
-                t.id === selectedTaskId
-        );
-    }, [activeTasks, search, selectedTaskId]);
+    const visibleTasks = useMemo(
+        () => getVisibleTasks(activeTasks, selectedTaskId),
+        [activeTasks, selectedTaskId]
+    );
+
+    const hasMoreTasks = activeTasks.length > MAX_VISIBLE_PILLS;
+
+    // Combobox items for dropdown
+    const comboboxItems = useMemo(
+        () => activeTasks.map((t) => ({ id: t.id, label: t.title, task: t })),
+        [activeTasks]
+    );
+
+    const handlePillClick = (task: Task) => {
+        if (task.id === selectedTaskId && onDeselect) {
+            onDeselect();
+        } else {
+            onSelect(task);
+        }
+    };
 
     if (activeTasks.length === 0) {
         return (
@@ -69,48 +116,62 @@ export function TaskPicker({
     }
 
     return (
-        <div className="flex flex-col gap-2">
-            {activeTasks.length > SEARCH_THRESHOLD && (
-                <div className="relative">
-                    <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-secondary)]" />
-                    <input
-                        type="text"
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        placeholder="Filter tasks..."
-                        className="h-8 w-full rounded-lg border border-[var(--border)] bg-[var(--background)] pl-9 pr-3 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-secondary)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
-                        disabled={disabled}
-                    />
-                </div>
-            )}
-            <div className="flex flex-wrap gap-2">
-                {filteredTasks.map((task) => {
-                    const isSelected = task.id === selectedTaskId;
+        <div className="flex flex-wrap items-center gap-2">
+            {visibleTasks.map((task) => {
+                const isSelected = task.id === selectedTaskId;
 
-                    return (
+                return (
+                    <button
+                        key={task.id}
+                        type="button"
+                        disabled={disabled}
+                        onClick={() => handlePillClick(task)}
+                        className={cn(
+                            'rounded-full border px-3 py-2 text-sm transition-colors',
+                            isSelected
+                                ? 'border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--text-primary)]'
+                                : 'border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--text-secondary)] hover:text-[var(--text-primary)]',
+                            disabled && 'cursor-not-allowed opacity-50'
+                        )}
+                        aria-pressed={isSelected}
+                    >
+                        {task.title}
+                    </button>
+                );
+            })}
+            {hasMoreTasks && (
+                <Combobox
+                    items={comboboxItems}
+                    value={selectedTaskId}
+                    onChange={(item) => onSelect(item.task)}
+                    searchPlaceholder="Search tasks..."
+                    emptyMessage="No tasks found"
+                    renderTrigger={({ open }) => (
                         <button
-                            key={task.id}
                             type="button"
                             disabled={disabled}
-                            onClick={() => onSelect(task)}
                             className={cn(
-                                'rounded-full border px-3 py-2 text-sm transition-colors',
-                                isSelected
-                                    ? 'border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--text-primary)]'
-                                    : 'border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--text-secondary)] hover:text-[var(--text-primary)]',
+                                'flex items-center gap-1 rounded-full border px-3 py-2 text-sm transition-colors',
+                                'border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--text-secondary)] hover:text-[var(--text-primary)]',
+                                open && 'border-[var(--accent)] text-[var(--text-primary)]',
                                 disabled && 'cursor-not-allowed opacity-50'
                             )}
-                            aria-pressed={isSelected}
                         >
-                            {task.title}
+                            <MoreHorizontal className="h-4 w-4" />
+                            <span>More</span>
                         </button>
-                    );
-                })}
-            </div>
-            {search.trim() && filteredTasks.length === 0 && (
-                <p className="text-sm text-[var(--text-secondary)]">
-                    No tasks matching &ldquo;{search.trim()}&rdquo;
-                </p>
+                    )}
+                    renderItem={({ item, isSelected }) => (
+                        <span
+                            className={cn(
+                                'text-sm',
+                                isSelected && 'font-medium'
+                            )}
+                        >
+                            {item.label}
+                        </span>
+                    )}
+                />
             )}
         </div>
     );
