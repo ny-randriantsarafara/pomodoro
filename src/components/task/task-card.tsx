@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useRef, useEffect } from 'react';
 import { Check, Archive, Pencil } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Card, CardFooter, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog } from '@/components/ui/dialog';
+import { cn } from '@/lib/utils';
 import { TaskForm } from './task-form';
 import { updateTaskStatus } from '@/actions/task-actions';
 import type { Task } from '@/lib/db/schema';
@@ -25,6 +26,42 @@ const dueDateFormatter = new Intl.DateTimeFormat('en-US', {
 export function formatDueDate(date: Date | null): string | null {
     if (!date) return null;
     return dueDateFormatter.format(date);
+}
+
+function NoteContent({ note }: { readonly note: string }) {
+    const [isExpanded, setIsExpanded] = useState(false);
+    const [isClamped, setIsClamped] = useState(false);
+    const ref = useRef<HTMLParagraphElement>(null);
+
+    useEffect(() => {
+        const el = ref.current;
+        if (el) {
+            setIsClamped(el.scrollHeight > el.clientHeight);
+        }
+    }, [note]);
+
+    return (
+        <div>
+            <p
+                ref={ref}
+                className={cn(
+                    'whitespace-pre-wrap text-sm text-[var(--text-secondary)]',
+                    !isExpanded && 'line-clamp-3'
+                )}
+            >
+                {note}
+            </p>
+            {(isClamped || isExpanded) && (
+                <button
+                    type="button"
+                    onClick={() => setIsExpanded((v) => !v)}
+                    className="mt-1 text-xs text-[var(--accent)] hover:text-[var(--accent-hover)] transition-colors"
+                >
+                    {isExpanded ? 'Show less' : 'Show more'}
+                </button>
+            )}
+        </div>
+    );
 }
 
 export function TaskCard({ task }: TaskCardProps) {
@@ -83,7 +120,7 @@ export function TaskCard({ task }: TaskCardProps) {
             </CardHeader>
 
             {task.note ? (
-                <p className="whitespace-pre-wrap text-sm text-[var(--text-secondary)]">{task.note}</p>
+                <NoteContent note={task.note} />
             ) : null}
 
             {dueDate ? (

@@ -1,7 +1,13 @@
 'use client';
 
-import { TIMER_STORAGE_KEY } from '@/lib/constants';
+import { TIMER_STORAGE_KEY, BREAK_STORAGE_KEY } from '@/lib/constants';
 import type { ActiveTimer } from '@/types';
+import type { PhaseTiming } from './timer-state';
+
+export interface PersistedBreak {
+    readonly phaseTiming: PhaseTiming;
+    readonly breakDurationSeconds: number;
+}
 
 export function saveTimer(timer: ActiveTimer): void {
     try {
@@ -117,6 +123,53 @@ export function loadTimer(): ActiveTimer | null {
 export function clearTimer(): void {
     try {
         localStorage.removeItem(TIMER_STORAGE_KEY);
+    } catch {
+        // localStorage may be unavailable
+    }
+}
+
+export function saveBreak(breakState: PersistedBreak): void {
+    try {
+        localStorage.setItem(BREAK_STORAGE_KEY, JSON.stringify(breakState));
+    } catch {
+        // localStorage may be unavailable
+    }
+}
+
+export function loadBreak(): PersistedBreak | null {
+    try {
+        const stored = localStorage.getItem(BREAK_STORAGE_KEY);
+        if (!stored) return null;
+        const parsed = JSON.parse(stored);
+        if (
+            parsed === null ||
+            typeof parsed !== 'object' ||
+            typeof parsed.breakDurationSeconds !== 'number' ||
+            parsed.phaseTiming === null ||
+            typeof parsed.phaseTiming !== 'object' ||
+            typeof parsed.phaseTiming.startedAt !== 'number' ||
+            typeof parsed.phaseTiming.durationSeconds !== 'number' ||
+            typeof parsed.phaseTiming.totalPausedSeconds !== 'number'
+        ) {
+            return null;
+        }
+        return {
+            phaseTiming: {
+                startedAt: parsed.phaseTiming.startedAt,
+                durationSeconds: parsed.phaseTiming.durationSeconds,
+                pausedAt: parsed.phaseTiming.pausedAt ?? null,
+                totalPausedSeconds: parsed.phaseTiming.totalPausedSeconds,
+            },
+            breakDurationSeconds: parsed.breakDurationSeconds,
+        };
+    } catch {
+        return null;
+    }
+}
+
+export function clearBreak(): void {
+    try {
+        localStorage.removeItem(BREAK_STORAGE_KEY);
     } catch {
         // localStorage may be unavailable
     }

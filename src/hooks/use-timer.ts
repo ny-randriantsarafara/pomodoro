@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useReducer, useRef } from 'react';
 import { abandonSession, completeSession } from '@/actions/session-actions';
-import { clearTimer, loadTimer, saveTimer } from './use-timer-persistence';
+import { clearTimer, loadTimer, saveTimer, saveBreak, loadBreak, clearBreak } from './use-timer-persistence';
 import { playAlarm, stopAlarm } from '@/lib/alarm';
 import {
     requestNotificationPermission,
@@ -102,6 +102,27 @@ function appendGuestSessionRecord(params: {
 }
 
 function restoreTimerState(sessionMode: TimerSessionMode): TimerState {
+    // Check for persisted break state first
+    const storedBreak = loadBreak();
+    if (storedBreak) {
+        const remainingSeconds = computeRemainingSeconds(
+            storedBreak.phaseTiming,
+            false
+        );
+        if (remainingSeconds > 0) {
+            return {
+                activeTimer: null,
+                phase: 'break',
+                remainingSeconds,
+                breakDurationSeconds: storedBreak.breakDurationSeconds,
+                phaseTiming: storedBreak.phaseTiming,
+                isPaused: false,
+                justCompletedFocus: false,
+            };
+        }
+        clearBreak();
+    }
+
     const stored = loadTimer();
 
     if (!stored) {
@@ -165,6 +186,7 @@ export function useTimer(options: UseTimerOptions = {}): UseTimerReturn {
         clearIntervalSafe();
         stopAlarm();
         clearTimer();
+        clearBreak();
         if (sessionMode === 'guest') {
             persistGuestActiveTimer(null);
         }
@@ -247,10 +269,20 @@ export function useTimer(options: UseTimerOptions = {}): UseTimerReturn {
                 persistGuestActiveTimer(null);
             }
             const breakDurationSeconds = timerSettings.shortBreakMinutes * 60;
+            const nowMs = Date.now();
             dispatch({
                 type: 'start-break',
                 breakDurationSeconds,
-                nowMs: Date.now(),
+                nowMs,
+            });
+            saveBreak({
+                phaseTiming: {
+                    startedAt: nowMs,
+                    durationSeconds: breakDurationSeconds,
+                    pausedAt: null,
+                    totalPausedSeconds: 0,
+                },
+                breakDurationSeconds,
             });
             transitionInFlightRef.current = false;
         } else {

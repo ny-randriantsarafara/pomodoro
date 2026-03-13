@@ -44,7 +44,7 @@ export function TimerDisplay({
                 </p>
             )}
             {task !== undefined && task.trim() !== '' && (
-                <p className="max-w-xs truncate text-sm text-[var(--text-secondary)]">
+                <p className="max-w-[220px] truncate text-sm text-[var(--text-secondary)]">
                     {task}
                 </p>
             )}

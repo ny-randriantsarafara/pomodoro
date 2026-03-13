@@ -25,3 +25,4 @@ export const DAILY_GOAL_MINUTES_MIN = 0;
 export const DAILY_GOAL_MINUTES_MAX = 720;
 
 export const TIMER_STORAGE_KEY = 'pomodoro-active-timer';
+export const BREAK_STORAGE_KEY = 'pomodoro-break-timer';
