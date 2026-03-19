@@ -5,6 +5,7 @@ import { useState, useRef, useEffect } from 'react';
 import { MoreVertical } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { NoteContent } from '@/components/ui/note-content';
 import { FOCUS_MODES } from '@/lib/constants';
 import { EditSessionDialog } from './edit-session-dialog';
 import { DeleteSessionDialog } from './delete-session-dialog';
@@ -145,9 +146,11 @@ export function SessionCard({ session }: SessionCardProps) {
                         </p>
                     )}
                     {session.description && (
-                        <p className="whitespace-pre-wrap text-xs text-[var(--text-secondary)]">
-                            {session.description}
-                        </p>
+                        <NoteContent
+                            content={session.description}
+                            className="text-xs"
+                            enableMarkdown
+                        />
                     )}
                     <div className="flex flex-wrap items-center gap-2">
                         <Badge variant={FOCUS_MODE_BADGE_VARIANT[session.focusMode]}>
