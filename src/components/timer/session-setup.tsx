@@ -120,7 +120,7 @@ export function SessionSetup({
                 />
                 {selectedTask ? (
                     <p className="text-sm text-[var(--text-secondary)]">
-                        Starting a focus block for
+                        Starting a focus block for{' '}
                         <span className="font-medium text-[var(--text-primary)]">
                             {selectedTask.title}
                         </span>
@@ -128,7 +128,7 @@ export function SessionSetup({
                     </p>
                 ) : trimmedQuickTask ? (
                     <p className="text-sm text-[var(--text-secondary)]">
-                        Starting a focus block for
+                        Starting a focus block for{' '}
                         <span className="font-medium text-[var(--text-primary)]">
                             {trimmedQuickTask}
                         </span>
